@@ -65,6 +65,9 @@ environment-specific tools (NVM, Bun, Terraform, glab, Ansible) based on your an
 exec zsh
 ```
 
+> If new terminal windows still open in bash, log out and back in — `chsh` requires
+> a new login session to take effect.
+
 ### Font setup (Nerd Font)
 
 The prompt uses [Nerd Font](https://www.nerdfonts.com/) icons. The bootstrap
@@ -226,12 +229,12 @@ podman secret create gemini_key <(echo "AI...")
 The Starship prompt uses ANSI color names — their actual appearance depends on
 your terminal's color scheme. Use the same scheme everywhere for a consistent look.
 
-**Recommended:** Ottoson (perceptually uniform, good contrast on dark backgrounds)
+**Recommended:** Ottosson (perceptually uniform, good contrast on dark backgrounds)
 
 | Terminal | How to set |
 |---|---|
-| Windows Terminal (WSL) | Settings → Color schemes → **Ottoson** |
-| Ptyxis (Aurora DX) | Preferences → pick closest match, or import custom palette |
+| Windows Terminal (WSL) | Settings → Color schemes → **Ottosson** |
+| Ptyxis (Aurora DX) | Copy palette TOML to `~/.local/share/org.gnome.Ptyxis/palettes/` (see hex values below) |
 
 <details>
 <summary>Ottosson palette (hex values for manual import)</summary>
@@ -287,12 +290,15 @@ dotfiles/
 │       ├── atuin/config.toml.tmpl
 │       ├── ghostty/config
 │       ├── k9s/config.yaml
-│       └── git/               # Git identity includes
+│       └── git/               # Git identity includes + global gitignore
 ├── bin/                       # CLI tools (ai-sandbox)
-├── containers/                # Containerfile + distrobox.ini
+├── containers/                # Containerfile.ai-sandbox + distrobox.ini
 ├── scripts/                   # Setup automation (distrobox-setup.sh)
 └── hooks/                     # Git hooks (gitleaks pre-commit)
 ```
+
+A gitleaks pre-commit hook scans staged changes for secrets before every commit.
+If gitleaks is not installed, the hook prints a warning and allows the commit.
 
 ### chezmoi naming conventions
 

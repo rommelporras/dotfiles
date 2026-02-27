@@ -8,9 +8,7 @@ if ! command -v gitleaks &>/dev/null; then
 fi
 
 echo "Scanning for secrets..."
-gitleaks protect --staged --config .gitleaks.toml
-
-if [ $? -ne 0 ]; then
+if ! gitleaks protect --staged --config .gitleaks.toml; then
     echo ""
     echo "ERROR: Potential secrets detected! Review the findings above."
     echo "If this is a false positive, add the path to .gitleaks.toml [allowlist]."
