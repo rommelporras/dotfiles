@@ -1,0 +1,153 @@
+#!/bin/bash
+set -euo pipefail
+
+IMAGE_NAME="localhost/ai-sandbox:latest"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_DIR="$(dirname "$SCRIPT_DIR")"
+
+usage() {
+    cat <<EOF
+Usage: ai-sandbox [options] <tool> [-- extra-args]
+       ai-sandbox --build
+       ai-sandbox --shell
+
+Options:
+  --git         Mount deploy key (read-only) for git push capability
+  --no-network  Disable network access inside sandbox
+  --build       Build or rebuild the AI sandbox container image
+  --shell       Drop into sandbox shell (for debugging)
+
+Credential tiers:
+  (default)     Code only — no git push, no credentials
+  --git         Code + git push via dedicated deploy key (not personal SSH key)
+  --no-network  Code only, no network — maximum containment
+
+Examples:
+  ai-sandbox claude -- --dangerously-skip-permissions   # code only
+  ai-sandbox --git claude -- --dangerously-skip-permissions  # code + git push
+  ai-sandbox --no-network gemini                        # paranoid mode
+  ai-sandbox --git aider                                # any AI tool works
+  ai-sandbox --build
+EOF
+    exit 1
+}
+
+# ─── Build mode ──────────────────────────────────────────────────────
+if [ "${1:-}" = "--build" ]; then
+    echo "Building AI sandbox image..."
+    podman build -t "$IMAGE_NAME" -f "$REPO_DIR/containers/Containerfile.ai-sandbox" "$REPO_DIR/containers"
+    echo "Done. Image: $IMAGE_NAME"
+    exit 0
+fi
+
+# ─── Parse arguments ─────────────────────────────────────────────────
+TOOL=""
+GIT_MODE=false
+NETWORK_FLAG=""
+EXTRA_ARGS=()
+SHELL_MODE=false
+
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --shell)
+            SHELL_MODE=true
+            shift
+            ;;
+        --git)
+            GIT_MODE=true
+            shift
+            ;;
+        --no-network)
+            NETWORK_FLAG="--network=none"
+            shift
+            ;;
+        --)
+            shift
+            EXTRA_ARGS=("$@")
+            break
+            ;;
+        -*)
+            usage
+            ;;
+        *)
+            if [ -z "$TOOL" ]; then
+                TOOL="$1"
+            else
+                EXTRA_ARGS+=("$1")
+            fi
+            shift
+            ;;
+    esac
+done
+
+# ─── Validate flag combinations ─────────────────────────────────────
+if [ "$GIT_MODE" = true ] && [ -n "$NETWORK_FLAG" ]; then
+    echo "Error: --git and --no-network are mutually exclusive (can't push without network)"
+    exit 1
+fi
+
+# ─── Detect context group from $PWD ─────────────────────────────────
+MOUNT_SRC=""
+WORKDIR="/workspace"
+REAL_HOME="$(eval echo ~)"
+
+if [[ "$PWD" == "$REAL_HOME/personal/"* ]]; then
+    MOUNT_SRC="$REAL_HOME/personal"
+    REL_PATH="${PWD#$REAL_HOME/personal}"
+    WORKDIR="/workspace${REL_PATH}"
+elif [[ "$PWD" == "$REAL_HOME/eam/"* ]]; then
+    MOUNT_SRC="$REAL_HOME/eam"
+    REL_PATH="${PWD#$REAL_HOME/eam}"
+    WORKDIR="/workspace${REL_PATH}"
+else
+    MOUNT_SRC="$PWD"
+    WORKDIR="/workspace"
+fi
+
+# ─── Build command ───────────────────────────────────────────────────
+PODMAN_ARGS=(
+    run --rm -it
+    --name "ai-sandbox-$$"
+    --volume "$MOUNT_SRC:/workspace:z"
+    --workdir "$WORKDIR"
+    --userns=keep-id
+)
+
+# --git: mount deploy key and gitconfig (read-only)
+if [ "$GIT_MODE" = true ]; then
+    DEPLOY_KEY="$REAL_HOME/.ssh/ai-deploy-key"
+    if [ ! -f "$DEPLOY_KEY" ]; then
+        echo "Error: Deploy key not found at $DEPLOY_KEY"
+        echo "Create one: ssh-keygen -t ed25519 -f ~/.ssh/ai-deploy-key -C 'ai-sandbox-deploy'"
+        echo "Then add the public key to your GitHub/GitLab repos as a deploy key."
+        exit 1
+    fi
+    PODMAN_ARGS+=(
+        --volume "$DEPLOY_KEY:/home/developer/.ssh/id_ed25519:ro,z"
+        --volume "$REAL_HOME/.gitconfig:/home/developer/.gitconfig:ro,z"
+    )
+fi
+
+# Inject API keys via Podman secrets (if they exist)
+if podman secret inspect anthropic_key &>/dev/null; then
+    PODMAN_ARGS+=(--secret "anthropic_key,type=env,target=ANTHROPIC_API_KEY")
+fi
+if podman secret inspect gemini_key &>/dev/null; then
+    PODMAN_ARGS+=(--secret "gemini_key,type=env,target=GEMINI_API_KEY")
+fi
+
+if [ -n "$NETWORK_FLAG" ]; then
+    PODMAN_ARGS+=("$NETWORK_FLAG")
+fi
+
+PODMAN_ARGS+=("$IMAGE_NAME")
+
+# ─── Execute ─────────────────────────────────────────────────────────
+if [ "$SHELL_MODE" = true ]; then
+    exec podman "${PODMAN_ARGS[@]}" "exec zsh"
+elif [ -z "$TOOL" ]; then
+    usage
+else
+    # Generic tool execution — any command works
+    exec podman "${PODMAN_ARGS[@]}" "$TOOL ${EXTRA_ARGS[*]:-}"
+fi
