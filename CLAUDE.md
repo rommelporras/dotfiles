@@ -12,10 +12,11 @@ WSL2 (Ubuntu 24.04), Aurora DX (immutable Fedora), and Distrobox containers. Sup
 
 ```
 dotfiles/
-├── .chezmoi.toml.tmpl          # Interactive prompts (chezmoi init)
-├── .chezmoiignore              # Per-environment file skipping
-├── .chezmoiexternal.toml       # External deps (oh-my-zsh, plugins)
+├── .chezmoiroot                # Points chezmoi source to home/
 ├── home/                       # chezmoi source dir → maps to ~/
+│   ├── .chezmoi.toml.tmpl      # Interactive prompts (chezmoi init)
+│   ├── .chezmoiignore          # Per-environment file skipping
+│   ├── .chezmoiexternal.toml   # External deps (oh-my-zsh, plugins)
 │   ├── dot_zshrc.tmpl          # Shell config (templated)
 │   ├── dot_gitconfig.tmpl      # Git config (conditional includes)
 │   └── dot_config/             # ~/.config/ files
