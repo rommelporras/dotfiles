@@ -3,6 +3,9 @@ README.md
 LICENSE
 docs/
 
+# OMZ generates these at runtime
+.oh-my-zsh/cache/
+
 # Skip glab config if no homelab credentials
 {{- if not .has_homelab_creds }}
 .config/glab-cli/

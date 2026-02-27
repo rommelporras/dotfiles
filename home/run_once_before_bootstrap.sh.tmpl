@@ -41,6 +41,19 @@ if ! command -v starship &>/dev/null; then
     curl -sS https://starship.rs/install.sh | sh -s -- -y
 fi
 
+# JetBrainsMono Nerd Font (for Starship icons)
+# On WSL, fonts render on the Windows side — install manually there
+if [ "$IS_WSL" = false ]; then
+    FONT_DIR="$HOME/.local/share/fonts"
+    if [ ! -f "$FONT_DIR/JetBrainsMonoNerdFont-Regular.ttf" ]; then
+        echo "Installing JetBrainsMono Nerd Font..."
+        FONT_VERSION="3.3.0"
+        mkdir -p "$FONT_DIR"
+        curl -fsSL "https://github.com/ryanoasis/nerd-fonts/releases/download/v${FONT_VERSION}/JetBrainsMono.tar.xz" | tar xJ -C "$FONT_DIR"
+        fc-cache -f "$FONT_DIR"
+    fi
+fi
+
 # Atuin
 {{ if ne .atuin_account "none" -}}
 if ! command -v atuin &>/dev/null; then
@@ -122,6 +135,13 @@ chmod 700 ~/.ssh
 echo ""
 echo "=== Bootstrap complete ==="
 echo ""
+if [ "$IS_WSL" = true ]; then
+    echo "Font setup (WSL only — one time):"
+    echo "  Download JetBrainsMono Nerd Font from: https://www.nerdfonts.com/font-downloads"
+    echo "  Extract, select all .ttf files, right-click → Install"
+    echo "  Then set 'JetBrainsMono Nerd Font' as the font in Windows Terminal settings"
+    echo ""
+fi
 echo "Credential setup (do these once):"
 echo "  1. SSH keys:     Copy from 1Password → ~/.ssh/, then chmod 600"
 {{ if .has_work_creds -}}

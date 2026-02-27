@@ -43,11 +43,11 @@ plugins=(
 source $ZSH/oh-my-zsh.sh
 
 # Starship prompt
-eval "$(starship init zsh)"
+command -v starship &>/dev/null && eval "$(starship init zsh)"
 
 # Atuin shell history
 {{ if ne .atuin_account "none" -}}
-eval "$(atuin init zsh)"
+command -v atuin &>/dev/null && eval "$(atuin init zsh)"
 {{ end -}}
 
 # FZF
