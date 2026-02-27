@@ -1,0 +1,139 @@
+#!/bin/bash
+set -euo pipefail
+
+echo "=== Dotfiles bootstrap ==="
+echo "Environment: {{ .environment }}"
+
+# Detect platform
+IS_WSL=false
+IS_AURORA=false
+IS_DISTROBOX=false
+
+if grep -qi microsoft /proc/version 2>/dev/null; then
+    IS_WSL=true
+fi
+if grep -qi aurora /etc/os-release 2>/dev/null; then
+    IS_AURORA=true
+fi
+if [ -n "${DISTROBOX_ENTER_PATH:-}" ]; then
+    IS_DISTROBOX=true
+fi
+
+echo "Platform: WSL=$IS_WSL, Aurora=$IS_AURORA, Distrobox=$IS_DISTROBOX"
+
+# ─── Core tools ──────────────────────────────────────────────────────
+
+# Zsh
+if ! command -v zsh &>/dev/null; then
+    echo "Installing zsh..."
+    sudo apt-get update -qq && sudo apt-get install -y -qq zsh
+fi
+
+# Set zsh as default shell if not already
+if [ "$SHELL" != "$(command -v zsh)" ]; then
+    echo "Setting zsh as default shell..."
+    sudo chsh -s "$(command -v zsh)" "$(whoami)"
+fi
+
+# Starship
+if ! command -v starship &>/dev/null; then
+    echo "Installing starship..."
+    curl -sS https://starship.rs/install.sh | sh -s -- -y
+fi
+
+# Atuin
+{{ if ne .atuin_account "none" -}}
+if ! command -v atuin &>/dev/null; then
+    echo "Installing atuin..."
+    curl -sSf https://setup.atuin.sh | bash
+fi
+{{ end -}}
+
+# FZF
+if [ ! -d "$HOME/.fzf" ]; then
+    echo "Installing fzf..."
+    git clone --depth 1 https://github.com/junegunn/fzf.git "$HOME/.fzf"
+    "$HOME/.fzf/install" --key-bindings --completion --no-update-rc --no-bash --no-fish
+fi
+
+# xclip (for pbcopy/pbpaste aliases on WSL/Linux)
+if ! command -v xclip &>/dev/null && [ "$IS_AURORA" = false ]; then
+    echo "Installing xclip..."
+    sudo apt-get install -y -qq xclip
+fi
+
+# ─── Environment-specific tools ──────────────────────────────────────
+
+{{ if or (eq .environment "wsl-work") (eq .environment "wsl-gaming") -}}
+# NVM (WSL only)
+if [ ! -d "$HOME/.nvm" ]; then
+    echo "Installing nvm..."
+    curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash
+fi
+
+# Bun (WSL only)
+if ! command -v bun &>/dev/null; then
+    echo "Installing bun..."
+    curl -fsSL https://bun.sh/install | bash
+fi
+{{ end -}}
+
+{{ if or (eq .environment "distrobox-work") (eq .environment "wsl-work") (eq .environment "wsl-gaming") -}}
+# Terraform
+if ! command -v terraform &>/dev/null && [ "$IS_DISTROBOX" = true ]; then
+    echo "Installing terraform..."
+    sudo apt-get install -y -qq gnupg software-properties-common
+    curl -fsSL https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
+    echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
+    sudo apt-get update -qq && sudo apt-get install -y -qq terraform
+fi
+{{ end -}}
+
+{{ if or (eq .environment "distrobox-personal") -}}
+# glab CLI
+if ! command -v glab &>/dev/null; then
+    echo "Installing glab..."
+    curl -sL "https://gitlab.com/gitlab-org/cli/-/releases/permalink/latest/downloads/glab_$(uname -s)_$(uname -m).tar.gz" | tar xz -C /tmp
+    sudo mv /tmp/bin/glab /usr/local/bin/
+fi
+
+# Ansible
+if ! command -v ansible &>/dev/null; then
+    echo "Installing ansible..."
+    sudo apt-get install -y -qq ansible
+fi
+{{ end -}}
+
+# ─── Credential directories ──────────────────────────────────────────
+
+{{ if .has_work_creds -}}
+mkdir -p ~/.aws ~/.kube
+{{ end -}}
+
+{{ if .has_homelab_creds -}}
+mkdir -p ~/.kube
+{{ end -}}
+
+mkdir -p ~/.ssh
+chmod 700 ~/.ssh
+
+# ─── Post-install instructions ───────────────────────────────────────
+
+echo ""
+echo "=== Bootstrap complete ==="
+echo ""
+echo "Credential setup (do these once):"
+echo "  1. SSH keys:     Copy from 1Password → ~/.ssh/, then chmod 600"
+{{ if .has_work_creds -}}
+echo "  2. AWS:          aws sso login --profile <name>"
+{{ end -}}
+{{ if .has_homelab_creds -}}
+echo "  3. Kubeconfig:   Copy homelab.yaml → ~/.kube/"
+echo "  4. GitLab:       glab auth login --hostname gitlab.k8s.rommelporras.com"
+{{ end -}}
+echo "  5. GitHub:       gh auth login"
+{{ if ne .atuin_account "none" -}}
+echo "  6. Atuin:        atuin login -u {{ .atuin_account }}"
+{{ end -}}
+echo ""
+echo "Restart your shell or run: exec zsh"
