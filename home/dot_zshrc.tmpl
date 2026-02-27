@@ -1,0 +1,116 @@
+# Path
+export PATH="$HOME/.local/bin:$PATH"
+
+# Oh My Zsh
+export ZSH="$HOME/.oh-my-zsh"
+ZSH_THEME=""  # Disabled — Starship handles the prompt
+
+plugins=(
+    1password
+    aws
+    docker
+    docker-compose
+    gh
+    git
+    git-commit
+    gitfast
+    github
+    helm
+    history
+    kubectl
+    kubectx
+    last-working-dir
+    node
+    npm
+    nvm
+    pip
+    pipenv
+    pod
+    pylint
+    python
+    safe-paste
+    ssh
+    sudo
+    systemd
+    tailscale
+    terraform
+    vscode
+    zsh-interactive-cd
+    zsh-navigation-tools
+    zsh-autosuggestions
+)
+
+source $ZSH/oh-my-zsh.sh
+
+# Starship prompt
+eval "$(starship init zsh)"
+
+# Atuin shell history
+{{ if ne .atuin_account "none" -}}
+eval "$(atuin init zsh)"
+{{ end -}}
+
+# FZF
+[ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
+
+# SSH agent — type passphrase once per session
+if [ -z "$SSH_AUTH_SOCK" ]; then
+    eval "$(ssh-agent -s)" > /dev/null
+    ssh-add ~/.ssh/id_ed25519 2>/dev/null
+fi
+
+# ─── Universal aliases ───────────────────────────────────────────────
+alias ll="ls -ltra"
+alias gd="git diff"
+alias gcmsg="git commit -m"
+alias gitc="git checkout"
+alias gitm="git checkout master"
+alias zshconfig="${EDITOR:-code} ~/.zshrc"
+alias pip=pip3
+
+{{ if or (eq .environment "wsl-work") (eq .environment "wsl-gaming") -}}
+# ─── WSL-only ────────────────────────────────────────────────────────
+alias pbcopy='xclip -selection clipboard'
+alias pbpaste='xclip -selection clipboard -o'
+export BROWSER="/mnt/c/Program Files/Google/Chrome/Application/chrome.exe"
+export PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH="/mnt/c/Program Files/Google/Chrome/Application/chrome.exe"
+
+# Runtime managers
+export NVM_DIR="$HOME/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
+export BUN_INSTALL="$HOME/.bun"
+export PATH="$BUN_INSTALL/bin:$PATH"
+[ -s "$BUN_INSTALL/_bun" ] && source "$BUN_INSTALL/_bun"
+{{ end -}}
+
+{{ if or (eq .environment "wsl-work") (eq .environment "wsl-gaming") (eq .environment "distrobox-work") -}}
+# ─── Work context ────────────────────────────────────────────────────
+alias tfi="terraform init -reconfigure"
+alias tfp="terraform plan"
+alias tfwl="terraform workspace list"
+alias eam='cd ~/eam'
+alias eam-sre='cd ~/eam/eam-sre/rommel-porras'
+alias eam-terraform='cd ~/eam/eam-terraform'
+alias nightly-restart='cd ~/eam/eam-nightly-restart'
+alias tmp='cd ~/eam/tmp'
+{{ end -}}
+
+{{ if or (eq .environment "wsl-work") (eq .environment "wsl-gaming") (eq .environment "distrobox-personal") -}}
+# ─── Personal/homelab context ────────────────────────────────────────
+alias personal='cd ~/personal'
+alias invoicetron='cd ~/personal/invoicetron'
+alias homelab='cd ~/personal/homelab'
+alias kubectl-homelab='kubectl --kubeconfig ~/.kube/homelab.yaml'
+alias helm-homelab='KUBECONFIG=~/.kube/homelab.yaml helm'
+
+# Claude Code Telemetry → Homelab K8s OTel Collector
+export CLAUDE_CODE_ENABLE_TELEMETRY=1
+export OTEL_METRICS_EXPORTER=otlp
+export OTEL_LOGS_EXPORTER=otlp
+export OTEL_EXPORTER_OTLP_PROTOCOL=grpc
+export OTEL_EXPORTER_OTLP_ENDPOINT=http://10.10.30.22:4317
+export OTEL_METRIC_EXPORT_INTERVAL=5000
+export OTEL_LOGS_EXPORT_INTERVAL=5000
+export OTEL_RESOURCE_ATTRIBUTES="machine.name=$HOST"
+{{ end -}}
