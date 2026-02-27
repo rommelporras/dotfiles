@@ -1,0 +1,22 @@
+[user]
+	name = Rommel Porras
+
+[includeIf "gitdir:~/personal/"]
+	path = ~/.config/git/personal.gitconfig
+
+[includeIf "gitdir:~/eam/"]
+	path = ~/.config/git/work.gitconfig
+
+[alias]
+	cc = "!f() {\n\
+		local type scope attention msg\n\
+		type=\"$1\"; shift\n\
+		while [ $# -ne 0 ]; do\n\
+			case \"$1\" in\n\
+				-s|--scope) scope=\"$2\"; shift 2 ;;\n\
+				-a|--attention) attention=\"!\"; shift ;;\n\
+				*) msg=\"${msg:+$msg }$1\"; shift ;;\n\
+			esac\n\
+		done\n\
+		git commit -m \"${type}${scope:+($scope)}${attention}: ${msg}\"\n\
+	}; f"
