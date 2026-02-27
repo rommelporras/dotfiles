@@ -1,0 +1,18 @@
+#!/bin/bash
+# Pre-commit hook: scan staged changes for secrets with gitleaks
+
+if ! command -v gitleaks &>/dev/null; then
+    echo "Warning: gitleaks not installed. Skipping secret scan."
+    echo "Install: https://github.com/gitleaks/gitleaks#installing"
+    exit 0
+fi
+
+echo "Scanning for secrets..."
+gitleaks protect --staged --config .gitleaks.toml
+
+if [ $? -ne 0 ]; then
+    echo ""
+    echo "ERROR: Potential secrets detected! Review the findings above."
+    echo "If this is a false positive, add the path to .gitleaks.toml [allowlist]."
+    exit 1
+fi
