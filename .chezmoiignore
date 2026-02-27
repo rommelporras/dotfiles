@@ -1,0 +1,14 @@
+# README and repo meta files are not dotfiles
+README.md
+LICENSE
+docs/
+
+# Skip glab config if no homelab credentials
+{{- if not .has_homelab_creds }}
+.config/glab-cli/
+{{- end }}
+
+# Skip AWS config if no work credentials
+{{- if not .has_work_creds }}
+.aws/
+{{- end }}

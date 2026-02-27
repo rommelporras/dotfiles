@@ -1,0 +1,16 @@
+{{- $environment := promptStringOnce . "environment" "Environment (wsl-work/wsl-gaming/aurora/distrobox-work/distrobox-personal/distrobox-sandbox)" -}}
+{{- $personalEmail := promptStringOnce . "personal_email" "Personal git email" -}}
+{{- $workEmail := promptStringOnce . "work_email" "Work git email (blank to skip)" -}}
+{{- $hasWorkCreds := promptBoolOnce . "has_work_creds" "Does this machine have work credentials (AWS, EKS)" -}}
+{{- $hasHomelabCreds := promptBoolOnce . "has_homelab_creds" "Does this machine have homelab credentials" -}}
+{{- $atuinSyncAddress := promptStringOnce . "atuin_sync_address" "Atuin sync server URL (blank for none yet)" -}}
+{{- $atuinAccount := promptStringOnce . "atuin_account" "Atuin account (rommel-personal/rommel-work/none)" -}}
+
+[data]
+  environment = {{ $environment | quote }}
+  personal_email = {{ $personalEmail | quote }}
+  work_email = {{ $workEmail | quote }}
+  has_work_creds = {{ $hasWorkCreds }}
+  has_homelab_creds = {{ $hasHomelabCreds }}
+  atuin_sync_address = {{ $atuinSyncAddress | quote }}
+  atuin_account = {{ $atuinAccount | quote }}

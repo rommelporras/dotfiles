@@ -1,0 +1,42 @@
+# Credentials and secrets
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+*.cer
+.env
+.env.*
+!.env.example
+credentials
+credentials.*
+secrets.*
+*.age
+token
+token.*
+*_token
+*_TOKEN
+.netrc
+.npmrc
+
+# Cloud configs with secrets
+.aws/credentials
+.aws/sso/
+.kube/cache/
+.kube/*.yaml
+
+# SSH private keys
+id_*
+!id_*.pub
+
+# Tool secrets
+.config/glab-cli/config.yml
+.config/gh/hosts.yml
+.config/op/
+
+# OS and editor
+.DS_Store
+Thumbs.db
+*.swp
+*~
+.vscode/
