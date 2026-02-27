@@ -15,3 +15,37 @@ docs/
 {{- if not .has_work_creds }}
 .aws/
 {{- end }}
+
+# Claude Code runtime files (managed by Claude Code itself, not chezmoi)
+.claude/.credentials.json
+.claude/backups/
+.claude/cache/
+.claude/debug/
+.claude/downloads/
+.claude/file-history/
+.claude/history.jsonl
+.claude/ide/
+.claude/mcp-needs-auth-cache.json
+.claude/paste-cache/
+.claude/plans/
+.claude/plugins/
+.claude/projects/
+.claude/session-env/
+.claude/shell-snapshots/
+.claude/statsig/
+.claude/stats-cache.json
+.claude/tasks/
+.claude/telemetry/
+.claude/todos/
+.claude/security_warnings_state*
+.claude/double-shot-latte/
+
+# Skip Claude config on sandbox (AI sandbox uses --dangerously-skip-permissions)
+{{- if eq .environment "distrobox-sandbox" }}
+.claude/
+{{- end }}
+
+# Skip Claude config on Aurora host (just a container launcher)
+{{- if eq .environment "aurora" }}
+.claude/
+{{- end }}

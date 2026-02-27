@@ -21,6 +21,15 @@ fi
 
 echo "Platform: WSL=$IS_WSL, Aurora=$IS_AURORA, Distrobox=$IS_DISTROBOX"
 
+# ─── Claude Code: replace old symlinks with chezmoi-managed files ────
+
+for f in CLAUDE.md settings.json hooks agents skills; do
+    if [ -L "$HOME/.claude/$f" ]; then
+        echo "Removing old symlink: ~/.claude/$f"
+        rm "$HOME/.claude/$f"
+    fi
+done
+
 # ─── Core tools ──────────────────────────────────────────────────────
 
 # Zsh

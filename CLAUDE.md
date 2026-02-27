@@ -19,6 +19,7 @@ dotfiles/
 │   ├── .chezmoiexternal.toml   # External deps (oh-my-zsh, plugins)
 │   ├── dot_zshrc.tmpl          # Shell config (templated)
 │   ├── dot_gitconfig.tmpl      # Git config (conditional includes)
+│   ├── private_dot_claude/     # Claude Code global config (~/.claude/)
 │   └── dot_config/             # ~/.config/ files
 ├── scripts/                    # Setup automation
 ├── containers/                 # Distrobox + Podman definitions
@@ -29,7 +30,7 @@ dotfiles/
 ## chezmoi Conventions
 
 - `dot_` prefix → `.` in target (e.g., `dot_zshrc` → `.zshrc`)
-- `private_dot_` prefix → `.` with 0600 permissions
+- `private_dot_` prefix → `.` with owner-only permissions (0600 files, 0700 dirs)
 - `.tmpl` suffix → Go text/template processing
 - `run_once_before_` prefix → script that runs once on first apply, before files
 - Template data defined in `.chezmoi.toml.tmpl`, stored locally in `~/.config/chezmoi/chezmoi.toml`
@@ -67,6 +68,16 @@ chezmoi add ~/.config/some/config.toml
 # Update external dependencies (oh-my-zsh, plugins)
 chezmoi update
 ```
+
+## Claude Code Config
+
+`home/private_dot_claude/` deploys to `~/.claude/` — Claude Code's global config.
+Non-exact directory (chezmoi won't delete runtime files like `history.jsonl`, `projects/`, etc.).
+
+- `CLAUDE.md.tmpl` — templated, conditional "Personal Environment" section per environment
+- `settings.json` — same everywhere (hooks use `$HOME` which resolves correctly)
+- `hooks/` — executable_ prefix for chezmoi to set +x permissions
+- `agents/`, `skills/` — plain files, no templating needed
 
 ## Rules
 

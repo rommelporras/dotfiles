@@ -11,6 +11,7 @@ Aurora DX, and Distrobox containers.
 - **FZF** fuzzy finder
 - **Git** with conditional identity (personal vs work, auto-switches by directory)
 - **Conventional commit** helper (`git cc feat "message"`)
+- **Claude Code** global config (CLAUDE.md, settings, hooks, skills, agents)
 - **AI sandbox** — Podman container for running AI agents with tiered credential access
 
 ## Supported Environments
@@ -285,6 +286,12 @@ dotfiles/
 │   ├── dot_zshrc.tmpl         # Shell config
 │   ├── dot_gitconfig.tmpl     # Git config (conditional includes)
 │   ├── run_once_before_bootstrap.sh.tmpl  # First-run setup script
+│   ├── private_dot_claude/    # Claude Code global config (~/.claude/)
+│   │   ├── CLAUDE.md.tmpl     # Global instructions (templated per env)
+│   │   ├── settings.json      # Permissions, hooks, plugins
+│   │   ├── hooks/             # Security hooks (secret scan, write protection)
+│   │   ├── agents/            # Custom agents (code-reviewer)
+│   │   └── skills/            # Skills (/commit, /push, /explain-code)
 │   └── dot_config/            # ~/.config/ files
 │       ├── starship.toml
 │       ├── atuin/config.toml.tmpl
@@ -305,9 +312,42 @@ If gitleaks is not installed, the hook prints a warning and allows the commit.
 | Prefix/suffix | Meaning |
 |---|---|
 | `dot_` | Becomes `.` in target (`dot_zshrc` → `.zshrc`) |
-| `private_dot_` | `.` with 0600 permissions |
+| `private_dot_` | `.` with owner-only permissions (0600 files, 0700 dirs) |
 | `.tmpl` | Processed as Go text/template |
 | `run_once_before_` | Script that runs once, before file creation |
+
+## Claude Code Config
+
+Claude Code's global configuration (`~/.claude/`) is managed by chezmoi. This
+replaces the old `claude-config` repo that used symlinks.
+
+### What's included
+
+| File | Purpose |
+|---|---|
+| `CLAUDE.md` | Global instructions (templated per environment) |
+| `settings.json` | Permission deny rules, hooks, enabled plugins |
+| `hooks/` | Security hooks: secret scanning, write protection, destructive command blocking |
+| `agents/code-reviewer.md` | Code review agent with per-project memory |
+| `skills/commit/` | `/commit` — conventional commit workflow |
+| `skills/push/` | `/push` — push to all configured remotes |
+| `skills/explain-code/` | `/explain-code` — structured code explanations |
+
+### Environment differences
+
+`CLAUDE.md` is templated — the "Personal Environment" section adapts:
+
+| Environment | Section content |
+|---|---|
+| `wsl-work`, `wsl-gaming` | WSL2 specifics (Windows Chrome, no `op`, GitLab primary) |
+| `distrobox-personal` | Distrobox specifics (no `op`, GitLab primary) |
+| `distrobox-work` | Work specifics (GitHub for work, GitLab for personal) |
+| `distrobox-sandbox`, `aurora` | Skipped entirely (excluded in `.chezmoiignore`) |
+
+### Runtime files
+
+Claude Code generates many runtime files (`history.jsonl`, `projects/`, `cache/`,
+etc.). These are excluded in `.chezmoiignore` so chezmoi doesn't touch them.
 
 ## History Migration
 
