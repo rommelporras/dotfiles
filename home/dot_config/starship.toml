@@ -16,6 +16,12 @@ $aws\
 $docker_context\
 $nodejs\
 $python\
+$golang\
+$rust\
+$java\
+$lua\
+$ruby\
+$terraform\
 $cmd_duration\
 $time\
 $line_break\
@@ -59,6 +65,9 @@ staged = "+"
 renamed = "»"
 deleted = "x"
 
+[git_commit]
+tag_symbol = '  '
+
 [time]
 disabled = false
 style = "242"
@@ -73,7 +82,7 @@ format = ' [$symbol$context( \($namespace\))]($style)'
 detect_env_vars = ['KUBECONFIG']
 
 [aws]
-symbol = " "
+symbol = "  "
 style = "bold yellow"
 format = ' [$symbol($profile)]($style)'
 
@@ -93,6 +102,114 @@ symbol = " "
 style = "bold yellow"
 format = ' [$symbol${pyenv_prefix}(${version})(\($virtualenv\))]($style)'
 
+[golang]
+symbol = " "
+
+[rust]
+symbol = "󱘗 "
+
+[java]
+symbol = " "
+
+[lua]
+symbol = " "
+
+[ruby]
+symbol = " "
+
+[terraform]
+symbol = "󱁢 "
+
+[c]
+symbol = " "
+
+[cmake]
+symbol = " "
+
+[conda]
+symbol = " "
+
+[crystal]
+symbol = " "
+
+[dart]
+symbol = " "
+
+[elixir]
+symbol = " "
+
+[elm]
+symbol = " "
+
+[fennel]
+symbol = " "
+
+[fossil_branch]
+symbol = " "
+
+[guix_shell]
+symbol = " "
+
+[haskell]
+symbol = " "
+
+[haxe]
+symbol = " "
+
+[hg_branch]
+symbol = " "
+
+[julia]
+symbol = " "
+
+[kotlin]
+symbol = " "
+
+[memory_usage]
+symbol = "󰍛 "
+
+[meson]
+symbol = "󰔷 "
+
+[nim]
+symbol = "󰆥 "
+
+[nix_shell]
+symbol = " "
+
+[ocaml]
+symbol = " "
+
+[package]
+symbol = "󰏗 "
+
+[perl]
+symbol = " "
+
+[php]
+symbol = " "
+
+[pijul_channel]
+symbol = " "
+
+[rlang]
+symbol = "󰟔 "
+
+[scala]
+symbol = " "
+
+[swift]
+symbol = " "
+
+[zig]
+symbol = " "
+
+[gradle]
+symbol = " "
+
+[buf]
+symbol = " "
+
 [cmd_duration]
 min_time = 2_000
 format = " [󰔛 $duration]($style)"
@@ -100,4 +217,12 @@ style = "bold yellow"
 
 [character]
 success_symbol = "[❯](bold green)"
-error_symbol = "[❯](bold red)"
+error_symbol = "[✗](bold red)"
+
+# rpm-ostree deployment indicator (no-ops on non-ostree systems)
+[custom.update]
+when = "/usr/bin/rpm-ostree status --json | /usr/bin/jq -e \".deployments[0].booted == false\" > /dev/null;"
+command = 'echo "New deployment staged"'
+symbol = ""
+format = " $symbol [($output)]($style) "
+style = "italic green"
