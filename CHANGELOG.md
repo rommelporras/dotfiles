@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.1.1] - 2026-03-03
+
+### Fixed
+
+- Only install Nerd Font manually in Distrobox containers (avoids conflict with brew cask on immutable Fedora)
+
+### Changed
+
+- Restructure Aurora DX setup: devmode before 1Password (rebase resets layered packages)
+- Add git clone step and devmode rebase warning to Aurora setup
+- Separate WSL and Aurora chezmoi install paths in README
+- Update font setup docs to reflect per-platform install method
+
 ## [v1.0.0] - 2026-02-28
 
 ### Added
