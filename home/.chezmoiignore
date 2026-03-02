@@ -45,7 +45,4 @@ docs/
 .claude/
 {{- end }}
 
-# Skip Claude config on Aurora host (just a container launcher)
-{{- if eq .environment "aurora" }}
-.claude/
-{{- end }}
+# Aurora host: deploy Claude config (user runs Claude Code directly on host)
