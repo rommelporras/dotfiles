@@ -32,11 +32,73 @@ Aurora DX, and Distrobox containers.
 - `curl` and `git` installed
 - `sudo` access (bootstrap installs packages)
 - A **Nerd Font** in your terminal (for Starship icons)
+- **1Password** desktop app installed with SSH Agent enabled (see platform setup below)
+
+#### WSL2 (Ubuntu) — platform setup
+
+1. Install **1Password for Windows** (desktop app, not Microsoft Store)
+2. Settings → Developer → enable **SSH Agent** → choose "Use Key Names"
+3. Settings → Developer → disable **OpenSSH Authentication Agent** service
+   (`Win+R` → `services.msc` → "OpenSSH Authentication Agent" → Startup type: Disabled)
+4. Import SSH keys via 1Password desktop: New Item → SSH Key → Add Private Key → Import
+   - Store as "SSH Key" category in **Private** vault (not Secure Note — agent won't serve those)
+5. Install the npiperelay bridge (required for WSL to access Windows 1Password agent):
+   ```bash
+   sudo apt install -y socat
+   curl -Lo /tmp/npiperelay.zip "https://github.com/jstarks/npiperelay/releases/latest/download/npiperelay_windows_amd64.zip"
+   unzip -o /tmp/npiperelay.zip -d /tmp/npiperelay
+   sudo install -m 0755 /tmp/npiperelay/npiperelay.exe /usr/local/bin/npiperelay.exe
+   rm -rf /tmp/npiperelay /tmp/npiperelay.zip
+   ```
+6. After chezmoi apply, the `.zshrc` bridge script connects WSL to the Windows agent
+   via socket at `~/.1password/agent.sock`
+
+#### Aurora DX — platform setup
+
+1. Switch default shell to zsh (Aurora ships bash as default):
+   ```bash
+   brew install zsh
+   ```
+   Then in Ptyxis: Terminal → Preferences → edit the default profile →
+   "Use Custom Command" → `/home/linuxbrew/.linuxbrew/bin/zsh`
+   (Do NOT use `chsh` — atomic systems don't have it, and changing login shell risks login loops)
+
+2. Install brew CLI tools + enable bling:
+   ```bash
+   ujust aurora-cli
+   SHELL=zsh ujust aurora-cli
+   ```
+   Close and reopen terminal.
+
+3. Install **1Password** via rpm-ostree (NOT Flatpak — Flatpak SSH agent is broken by sandbox):
+   ```bash
+   cat << 'EOF' | sudo tee /etc/yum.repos.d/1password.repo
+   [1password]
+   name=1Password Stable Channel
+   baseurl=https://downloads.1password.com/linux/rpm/stable/$basearch
+   enabled=1
+   gpgcheck=1
+   repo_gpgcheck=1
+   gpgkey=https://downloads.1password.com/linux/keys/1password.asc
+   EOF
+   rpm-ostree install 1password 1password-cli
+   systemctl reboot
+   ```
+
+4. Open 1Password → sign in → Settings → Developer → enable **SSH Agent**
+5. Settings → Security → enable **Unlock using system authentication** (uses Aurora user password or fingerprint)
+6. SSH agent socket is at `~/.1Password/agent.sock` (capital P).
+   After chezmoi apply, `.zshrc` sets `SSH_AUTH_SOCK` automatically.
+
+7. Install Claude Code:
+   ```bash
+   brew install claude-code
+   ```
 
 ### 1. Install chezmoi and apply dotfiles
 
 ```bash
-# Cache sudo credentials first — bootstrap installs packages via apt
+# WSL: cache sudo first — bootstrap installs packages via apt
 sudo -v
 
 # Install chezmoi + clone this repo + run interactive prompts + apply
@@ -66,8 +128,9 @@ environment-specific tools (NVM, Bun, Terraform, glab, Ansible) based on your an
 exec zsh
 ```
 
-> If new terminal windows still open in bash, log out and back in — `chsh` requires
-> a new login session to take effect.
+> **WSL:** If new terminal windows still open in bash, log out and back in — `chsh`
+> requires a new login session.
+> **Aurora:** Shell is set via Ptyxis custom command (see platform setup above), not `chsh`.
 
 ### Font setup (Nerd Font)
 
@@ -81,11 +144,18 @@ fonts render on the Windows side — install manually:
 
 ### 2. Set up credentials (manual, per machine)
 
-The bootstrap creates the directories — you populate them:
+The bootstrap creates `~/.ssh/` — you populate it with public keys only.
+Private keys stay in 1Password; the SSH agent serves them.
 
 ```bash
-# SSH keys (copy from 1Password)
-chmod 600 ~/.ssh/id_*
+# SSH public keys (needed for IdentityFile matching — private keys stay in 1Password)
+# Copy .pub files from another machine, or export from 1Password
+cp id_ed25519.pub ~/.ssh/
+cp proxmox.pub ~/.ssh/      # if applicable
+chmod 644 ~/.ssh/*.pub
+
+# Verify 1Password SSH agent works
+ssh-add -l                   # Should list your 1Password SSH keys
 
 # GitHub CLI
 gh auth login
@@ -200,7 +270,7 @@ ai-sandbox --shell
 | `--git` | yes | yes | API keys + deploy key (read-only) |
 | `--no-network` | no | no | API keys only |
 
-The `--git` flag mounts `~/.ssh/ai-deploy-key` (not your personal `id_ed25519`).
+The `--git` flag mounts `~/.ssh/ai-deploy-key` (not your 1Password-managed keys).
 Create it once:
 
 ```bash
