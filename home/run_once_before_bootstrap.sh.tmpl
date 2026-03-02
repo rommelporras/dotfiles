@@ -55,8 +55,9 @@ if ! command -v starship &>/dev/null; then
 fi
 
 # JetBrainsMono Nerd Font (for Starship icons)
-# On WSL, fonts render on the Windows side — install manually there
-if [ "$IS_WSL" = false ]; then
+# WSL: fonts render on the Windows side — install manually there
+# Immutable Fedora (Aurora/Bluefin/Kinoite/Silverblue): ujust devmode installs fonts via brew cask
+if [ "$IS_DISTROBOX" = true ]; then
     FONT_DIR="$HOME/.local/share/fonts"
     if [ ! -f "$FONT_DIR/JetBrainsMonoNerdFont-Regular.ttf" ]; then
         echo "Installing JetBrainsMono Nerd Font..."
