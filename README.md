@@ -55,14 +55,26 @@ Aurora DX, and Distrobox containers.
 
 #### Aurora DX — platform setup
 
-1. Install brew CLI tools:
+1. Enable developer mode (installs Docker, Podman, Distrobox, dev tooling):
+   ```bash
+   ujust devmode
+   ```
+   Follow the prompts, then reboot when finished.
+
+2. Add your user to developer groups (docker, etc.):
+   ```bash
+   ujust dx-group
+   ```
+   Log out and back in for group changes to take effect.
+
+3. Install brew CLI tools:
    ```bash
    ujust aurora-cli
    SHELL=zsh ujust aurora-cli
    ```
    Close and reopen terminal.
 
-2. Switch default shell to zsh (Aurora ships bash as default):
+4. Switch default shell to zsh (Aurora ships bash as default):
    ```bash
    brew install zsh
    ```
@@ -70,7 +82,7 @@ Aurora DX, and Distrobox containers.
    "Use Custom Command" → `/home/linuxbrew/.linuxbrew/bin/zsh`
    (Do NOT use `chsh` — atomic systems don't have it, and changing login shell risks login loops)
 
-3. Install **1Password** via rpm-ostree (NOT Flatpak — Flatpak SSH agent is broken by sandbox):
+5. Install **1Password** via rpm-ostree (NOT Flatpak — Flatpak SSH agent is broken by sandbox):
    ```bash
    cat << 'EOF' | sudo tee /etc/yum.repos.d/1password.repo
    [1password]
@@ -85,12 +97,12 @@ Aurora DX, and Distrobox containers.
    systemctl reboot
    ```
 
-4. Open 1Password → sign in → Settings → Developer → enable **SSH Agent**
-5. Settings → Security → enable **Unlock using system authentication** (uses Aurora user password or fingerprint)
-6. SSH agent socket is at `~/.1Password/agent.sock` (capital P).
+6. Open 1Password → sign in → Settings → Developer → enable **SSH Agent**
+7. Settings → Security → enable **Unlock using system authentication** (uses Aurora user password or fingerprint)
+8. SSH agent socket is at `~/.1Password/agent.sock` (capital P).
    After chezmoi apply, `.zshrc` sets `SSH_AUTH_SOCK` automatically.
 
-7. Install Claude Code:
+9. Install Claude Code:
    ```bash
    brew install claude-code
    ```
