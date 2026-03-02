@@ -27,14 +27,11 @@ Aurora DX, and Distrobox containers.
 
 ## Quick Start
 
-### Prerequisites
+Pick your platform below, then continue to [Install chezmoi](#1-install-chezmoi-and-apply-dotfiles).
 
-- `curl` and `git` installed
-- `sudo` access (bootstrap installs packages)
-- A **Nerd Font** in your terminal (for Starship icons)
-- **1Password** desktop app installed with SSH Agent enabled (see platform setup below)
+---
 
-#### WSL2 (Ubuntu) — platform setup
+### WSL2 (Ubuntu) — platform setup
 
 1. Install **1Password for Windows** (desktop app, not Microsoft Store)
 2. Settings → Developer → enable **SSH Agent** → choose "Use Key Names"
@@ -53,7 +50,15 @@ Aurora DX, and Distrobox containers.
 6. After chezmoi apply, the `.zshrc` bridge script connects WSL to the Windows agent
    via socket at `~/.1password/agent.sock`
 
-#### Aurora DX — platform setup
+Continue to [Install chezmoi](#1-install-chezmoi-and-apply-dotfiles).
+
+---
+
+### Aurora DX — platform setup
+
+> **Important:** Follow these steps in order. `ujust devmode` rebases to a new OS
+> image, which resets any rpm-ostree layered packages. Install 1Password **after**
+> devmode, not before.
 
 1. Enable developer mode (installs Docker, Podman, Distrobox, dev tooling):
    ```bash
@@ -107,24 +112,30 @@ Aurora DX, and Distrobox containers.
    brew install claude-code
    ```
 
-> **Note:** Since chezmoi is installed via brew on Aurora, if you've already cloned
-> this repo (e.g. to `~/personal/dotfiles`), use the local path approach below
-> instead of the `curl | sh` installer.
+10. Clone this repo (chezmoi is already installed via brew):
+    ```bash
+    mkdir -p ~/personal
+    git clone git@github.com:rommelporras/dotfiles.git ~/personal/dotfiles
+    ```
+
+Continue to [Install chezmoi](#1-install-chezmoi-and-apply-dotfiles) — use the
+"Already have chezmoi installed?" path.
+
+---
 
 ### 1. Install chezmoi and apply dotfiles
 
+**WSL (fresh install):**
+
 ```bash
-# WSL: cache sudo first — bootstrap installs packages via apt
+# Cache sudo first — bootstrap installs packages via apt
 sudo -v
 
 # Install chezmoi + clone this repo + run interactive prompts + apply
 sh -c "$(curl -fsLS get.chezmoi.io)" -- init --apply rommelporras
 ```
 
-#### Already have chezmoi installed?
-
-If chezmoi is already installed (e.g. via `brew` on Aurora) and the repo is already
-cloned somewhere, pass the local path directly:
+**Aurora DX (chezmoi already installed via brew):**
 
 ```bash
 chezmoi init --apply ~/personal/dotfiles
@@ -144,9 +155,9 @@ chezmoi will ask you:
 
 Answers are saved locally to `~/.config/chezmoi/chezmoi.toml` and never committed.
 
-The bootstrap script automatically installs: zsh, Starship, JetBrainsMono Nerd Font,
-and environment-specific tools (FZF, xclip, NVM, Bun, Terraform, glab, Ansible)
-based on your environment. On Aurora, most tools are pre-installed via brew/RPM and skipped.
+The bootstrap script automatically installs: zsh, Starship, and environment-specific
+tools (FZF, xclip, NVM, Bun, Terraform, glab, Ansible) based on your environment.
+On Aurora, most tools are pre-installed via brew/RPM and skipped.
 
 **After install, restart your shell:**
 
@@ -160,13 +171,22 @@ exec zsh
 
 ### Font setup (Nerd Font)
 
-The prompt uses [Nerd Font](https://www.nerdfonts.com/) icons. The bootstrap
-installs JetBrainsMono Nerd Font automatically on Aurora/Distrobox. On WSL,
-fonts render on the Windows side — install manually:
+The prompt uses [Nerd Font](https://www.nerdfonts.com/) icons.
 
-1. Download **JetBrainsMono** from https://www.nerdfonts.com/font-downloads
-2. Extract the zip, select all `.ttf` files, right-click → **Install**
-3. In Windows Terminal: Settings → Profile → Appearance → Font face → `JetBrainsMono Nerd Font`
+- **Aurora:** `ujust devmode` installs JetBrainsMono Nerd Font via brew cask — no action needed.
+- **Distrobox:** The bootstrap installs JetBrainsMono Nerd Font automatically.
+- **WSL:** Fonts render on the Windows side — install manually:
+  1. Download **JetBrainsMono** from https://www.nerdfonts.com/font-downloads
+  2. Extract the zip, select all `.ttf` files, right-click → **Install**
+  3. In Windows Terminal: Settings → Profile → Appearance → Font face → `JetBrainsMono Nerd Font`
+
+Verify icons render correctly:
+
+```bash
+echo -e "\uf418 git  \ue718 node  \ue73c python  \uf308 docker"
+```
+
+You should see icons next to each label, not boxes or blanks.
 
 ### 2. Set up credentials (manual, per machine)
 
