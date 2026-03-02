@@ -18,6 +18,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Separate WSL and Aurora chezmoi install paths in README
 - Update font setup docs to reflect per-platform install method
 
+## [v1.1.0] - 2026-03-02
+
+### Added
+
+- 1Password SSH agent setup and Aurora platform instructions in README
+- Aurora DX audit docs — comparison, verification, and default config backups
+- Nerd Font symbols and language module icons to Starship config
+- `ujust devmode` and `ujust dx-group` steps to Aurora setup guide
+- chezmoi init with local path docs for pre-installed setups
+
+### Fixed
+
+- 6 critical Aurora DX compatibility issues
+- chezmoi init to use local path instead of symlink
+- Distrobox script path in README
+
+### Changed
+
+- Clean up Aurora audit docs and update project docs
+- Update environment matrix in README
+
 ## [v1.0.0] - 2026-02-28
 
 ### Added
