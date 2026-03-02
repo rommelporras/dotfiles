@@ -127,7 +127,7 @@ alias nightly-restart='cd ~/eam/eam-nightly-restart'
 alias tmp='cd ~/eam/tmp'
 {{ end -}}
 
-{{ if or (eq .environment "wsl-work") (eq .environment "wsl-gaming") (eq .environment "distrobox-personal") -}}
+{{ if or (eq .environment "wsl-work") (eq .environment "wsl-gaming") (eq .environment "aurora") (eq .environment "distrobox-personal") -}}
 # ─── Personal/homelab context ────────────────────────────────────────
 alias personal='cd ~/personal'
 alias invoicetron='cd ~/personal/invoicetron'

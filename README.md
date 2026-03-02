@@ -95,6 +95,10 @@ Aurora DX, and Distrobox containers.
    brew install claude-code
    ```
 
+> **Note:** Since chezmoi is installed via brew on Aurora, if you've already cloned
+> this repo (e.g. to `~/personal/dotfiles`), use the symlink approach below instead
+> of the `curl | sh` installer.
+
 ### 1. Install chezmoi and apply dotfiles
 
 ```bash
@@ -104,6 +108,19 @@ sudo -v
 # Install chezmoi + clone this repo + run interactive prompts + apply
 sh -c "$(curl -fsLS get.chezmoi.io)" -- init --apply rommelporras
 ```
+
+#### Already have chezmoi installed?
+
+If chezmoi is already installed (e.g. via `brew` on Aurora) and the repo is already
+cloned somewhere, symlink it to chezmoi's default source path and run init separately:
+
+```bash
+ln -s ~/personal/dotfiles ~/.local/share/chezmoi
+chezmoi init --apply
+```
+
+chezmoi expects its source directory at `~/.local/share/chezmoi`. Without this
+symlink, `chezmoi init` fails with a "no such file or directory" error.
 
 chezmoi will ask you:
 
