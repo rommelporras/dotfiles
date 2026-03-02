@@ -54,6 +54,7 @@ command -v starship &>/dev/null && eval "$(starship init zsh)"
 
 # Atuin shell history
 {{ if ne .atuin_account "none" -}}
+[ -f "$HOME/.atuin/bin/env" ] && . "$HOME/.atuin/bin/env"
 command -v atuin &>/dev/null && eval "$(atuin init zsh)"
 {{ end -}}
 
@@ -64,11 +65,23 @@ command -v atuin &>/dev/null && eval "$(atuin init zsh)"
 [ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
 {{ end -}}
 
-# SSH agent — type passphrase once per session
+{{ if or (eq .environment "wsl-work") (eq .environment "wsl-gaming") -}}
+# 1Password SSH Agent bridge (WSL → Windows named pipe via npiperelay)
+export SSH_AUTH_SOCK="$HOME/.1password/agent.sock"
+if ! ps aux | grep -q "[n]piperelay.exe -ei -s //./pipe/openssh-ssh-agent"; then
+    mkdir -p "$HOME/.1password"
+    [ -S "$SSH_AUTH_SOCK" ] && rm "$SSH_AUTH_SOCK"
+    (setsid socat UNIX-LISTEN:"$SSH_AUTH_SOCK",fork EXEC:"npiperelay.exe -ei -s //./pipe/openssh-ssh-agent",nofork &) >/dev/null 2>&1
+fi
+{{ else if eq .environment "aurora" -}}
+# 1Password SSH Agent (native Linux — socket created by 1Password app)
+export SSH_AUTH_SOCK="$HOME/.1Password/agent.sock"
+{{ else -}}
+# SSH agent fallback (distrobox inherits host agent, or starts its own)
 if [ -z "$SSH_AUTH_SOCK" ]; then
     eval "$(ssh-agent -s)" > /dev/null
-    ssh-add ~/.ssh/id_ed25519 2>/dev/null
 fi
+{{ end -}}
 
 # ─── Source bling.sh on Aurora (eza, bat, direnv, zoxide, mise, ugrep) ──
 {{ if eq .environment "aurora" -}}

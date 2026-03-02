@@ -55,20 +55,20 @@ Aurora DX, and Distrobox containers.
 
 #### Aurora DX — platform setup
 
-1. Switch default shell to zsh (Aurora ships bash as default):
-   ```bash
-   brew install zsh
-   ```
-   Then in Ptyxis: Terminal → Preferences → edit the default profile →
-   "Use Custom Command" → `/home/linuxbrew/.linuxbrew/bin/zsh`
-   (Do NOT use `chsh` — atomic systems don't have it, and changing login shell risks login loops)
-
-2. Install brew CLI tools + enable bling:
+1. Install brew CLI tools:
    ```bash
    ujust aurora-cli
    SHELL=zsh ujust aurora-cli
    ```
    Close and reopen terminal.
+
+2. Switch default shell to zsh (Aurora ships bash as default):
+   ```bash
+   brew install zsh
+   ```
+   Then in Ptyxis: edit the **first** profile (not a new one) →
+   "Use Custom Command" → `/home/linuxbrew/.linuxbrew/bin/zsh`
+   (Do NOT use `chsh` — atomic systems don't have it, and changing login shell risks login loops)
 
 3. Install **1Password** via rpm-ostree (NOT Flatpak — Flatpak SSH agent is broken by sandbox):
    ```bash
@@ -119,8 +119,9 @@ chezmoi will ask you:
 
 Answers are saved locally to `~/.config/chezmoi/chezmoi.toml` and never committed.
 
-The bootstrap script automatically installs: zsh, Starship, fzf, xclip, and
-environment-specific tools (NVM, Bun, Terraform, glab, Ansible) based on your answers.
+The bootstrap script automatically installs: zsh, Starship, JetBrainsMono Nerd Font,
+and environment-specific tools (FZF, xclip, NVM, Bun, Terraform, glab, Ansible)
+based on your environment. On Aurora, most tools are pre-installed via brew/RPM and skipped.
 
 **After install, restart your shell:**
 
@@ -205,7 +206,7 @@ ai-sandbox --build
 ```bash
 chezmoi diff          # Preview what would change
 chezmoi apply         # Apply changes
-chezmoi update        # Pull latest from GitHub + apply in one step
+chezmoi update        # Pull latest from remote + apply in one step
 ```
 
 ### Editing a managed file
@@ -412,7 +413,8 @@ replaces the old `claude-config` repo that used symlinks.
 | `wsl-work`, `wsl-gaming` | WSL2 specifics (Windows Chrome, no `op`, GitLab primary) |
 | `distrobox-personal` | Distrobox specifics (no `op`, GitLab primary) |
 | `distrobox-work` | Work specifics (GitHub for work, GitLab for personal) |
-| `distrobox-sandbox`, `aurora` | Skipped entirely (excluded in `.chezmoiignore`) |
+| `aurora` | Aurora DX specifics (ostree, 1Password SSH, no `op`, GitLab primary) |
+| `distrobox-sandbox` | Skipped entirely (excluded in `.chezmoiignore`) |
 
 ### Runtime files
 

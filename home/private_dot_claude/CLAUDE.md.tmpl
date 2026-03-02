@@ -52,6 +52,17 @@ Project CLAUDE.md files add project-specific context on top of this.
 - Work projects use GitHub; personal projects use self-hosted GitLab.
 {{- end }}
 
+{{- if eq .environment "aurora" }}
+
+## Personal Environment (Aurora DX)
+
+- Shell: zsh (via Ptyxis custom command, NOT login shell).
+- Immutable OS (ostree) — no `apt-get`, no `chsh`. Use `rpm-ostree` or `brew`.
+- 1Password SSH Agent at `~/.1Password/agent.sock` — private keys stay in 1Password.
+- Self-hosted GitLab is the primary remote; use `glab` CLI for GitLab operations.
+- **Never run `op` commands** — generate them and ask the user to run in 1Password.
+{{- end }}
+
 ## Engineering Philosophy
 
 - **Evidence over assertions** — Never claim something works without showing proof.

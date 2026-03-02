@@ -6,25 +6,24 @@ chezmoi-managed dotfiles repository for bootstrapping consistent dev environment
 WSL2 (Ubuntu 24.04), Aurora DX (immutable Fedora), and Distrobox containers. Supports
 6 target environments with credential isolation and AI agent sandboxing.
 
-**Design doc:** See `~/personal/homelab/docs/plans/2026-02-28-aurora-dx-migration-design.md`
-
 ## Repository Structure
 
 ```
 dotfiles/
-├── .chezmoiroot                # Points chezmoi source to home/
-├── home/                       # chezmoi source dir → maps to ~/
-│   ├── .chezmoi.toml.tmpl      # Interactive prompts (chezmoi init)
-│   ├── .chezmoiignore          # Per-environment file skipping
-│   ├── .chezmoiexternal.toml   # External deps (oh-my-zsh, plugins)
-│   ├── dot_zshrc.tmpl          # Shell config (templated)
-│   ├── dot_gitconfig.tmpl      # Git config (conditional includes)
-│   ├── private_dot_claude/     # Claude Code global config (~/.claude/)
-│   └── dot_config/             # ~/.config/ files
-├── scripts/                    # Setup automation
-├── containers/                 # Distrobox + Podman definitions
-├── bin/                        # CLI tools (ai-sandbox)
-└── hooks/                      # Git hooks (gitleaks)
+├── .chezmoiroot                         # Points chezmoi source to home/
+├── home/                                # chezmoi source dir → maps to ~/
+│   ├── .chezmoi.toml.tmpl               # Interactive prompts (chezmoi init)
+│   ├── .chezmoiignore                   # Per-environment file skipping
+│   ├── .chezmoiexternal.toml            # External deps (oh-my-zsh, plugins)
+│   ├── dot_zshrc.tmpl                   # Shell config (templated per env)
+│   ├── dot_gitconfig.tmpl               # Git config (conditional includes)
+│   ├── run_once_before_bootstrap.sh.tmpl # First-run setup (installs tools)
+│   ├── private_dot_claude/              # Claude Code global config (~/.claude/)
+│   └── dot_config/                      # ~/.config/ files
+├── scripts/                             # Setup automation
+├── containers/                          # Distrobox + Podman definitions
+├── bin/                                 # CLI tools (ai-sandbox)
+└── hooks/                               # Git hooks (gitleaks)
 ```
 
 ## chezmoi Conventions
@@ -37,14 +36,14 @@ dotfiles/
 
 ## Environment Matrix
 
-| Environment | Platform | Work creds | Homelab creds | Atuin account |
-|---|---|---|---|---|
-| wsl-work | WSL2 Ubuntu | yes | yes | rommel-personal |
-| wsl-gaming | WSL2 Ubuntu | yes | yes | rommel-personal |
-| aurora | Aurora DX host | no | no | none |
-| distrobox-work | Ubuntu container | yes | no | rommel-work |
-| distrobox-personal | Ubuntu container | no | yes | rommel-personal |
-| distrobox-sandbox | Ubuntu container | no | no | none |
+| Environment | Platform | SSH Agent | Key differences |
+|---|---|---|---|
+| wsl-work | WSL2 Ubuntu | 1Password via npiperelay | Work + personal creds, NVM/Bun |
+| wsl-gaming | WSL2 Ubuntu | 1Password via npiperelay | Work + personal creds, NVM/Bun |
+| aurora | Aurora DX host | 1Password native socket | Immutable OS, bling.sh, no chsh |
+| distrobox-work | Ubuntu container | Inherited from host | Work AWS/EKS creds |
+| distrobox-personal | Ubuntu container | Inherited from host | Homelab kubeconfig, glab |
+| distrobox-sandbox | Ubuntu container | Fallback ssh-agent | No creds, no Claude config |
 
 ## Common Commands
 
@@ -74,7 +73,7 @@ chezmoi update
 `home/private_dot_claude/` deploys to `~/.claude/` — Claude Code's global config.
 Non-exact directory (chezmoi won't delete runtime files like `history.jsonl`, `projects/`, etc.).
 
-- `CLAUDE.md.tmpl` — templated, conditional "Personal Environment" section per environment
+- `CLAUDE.md.tmpl` — templated, conditional environment section (WSL, Aurora, Distrobox variants)
 - `settings.json` — same everywhere (hooks use `$HOME` which resolves correctly)
 - `hooks/` — executable_ prefix for chezmoi to set +x permissions
 - `agents/`, `skills/` — plain files, no templating needed
@@ -86,4 +85,5 @@ Non-exact directory (chezmoi won't delete runtime files like `history.jsonl`, `p
 - **Template data is local** — `.chezmoi.toml.tmpl` defines prompts, answers live in
   `~/.config/chezmoi/chezmoi.toml` on each machine. Never hardcode environment-specific values.
 - **Test with `chezmoi diff`** before `chezmoi apply` — review what will change.
-- **Pin versions** in `.chezmoiexternal.toml` URLs when possible.
+- **Pin versions** in bootstrap URLs when possible. `.chezmoiexternal.toml` uses
+  `master.tar.gz` for oh-my-zsh (intentional — always latest).

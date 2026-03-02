@@ -34,12 +34,16 @@ done
 
 # Zsh
 if ! command -v zsh &>/dev/null; then
-    echo "Installing zsh..."
-    sudo apt-get update -qq && sudo apt-get install -y -qq zsh
+    if [ "$IS_AURORA" = false ]; then
+        echo "Installing zsh..."
+        sudo apt-get update -qq && sudo apt-get install -y -qq zsh
+    else
+        echo "WARNING: zsh not found on Aurora — install via 'brew install zsh'"
+    fi
 fi
 
-# Set zsh as default shell if not already
-if [ "$SHELL" != "$(command -v zsh)" ]; then
+# Set zsh as default shell (skip on Aurora — use Ptyxis custom command instead)
+if [ "$IS_AURORA" = false ] && [ "$SHELL" != "$(command -v zsh)" ]; then
     echo "Setting zsh as default shell..."
     sudo chsh -s "$(command -v zsh)" "$(whoami)"
 fi
@@ -78,8 +82,8 @@ if [ "$IS_AURORA" = false ] && [ ! -d "$HOME/.fzf" ]; then
     "$HOME/.fzf/install" --key-bindings --completion --no-update-rc --no-bash --no-fish
 fi
 
-# xclip (for pbcopy/pbpaste aliases on WSL/Linux)
-if ! command -v xclip &>/dev/null && [ "$IS_AURORA" = false ]; then
+# xclip (for pbcopy/pbpaste aliases on WSL — not needed on Aurora or Distrobox)
+if ! command -v xclip &>/dev/null && [ "$IS_AURORA" = false ] && [ "$IS_DISTROBOX" = false ]; then
     echo "Installing xclip..."
     sudo apt-get install -y -qq xclip
 fi
@@ -152,7 +156,8 @@ if [ "$IS_WSL" = true ]; then
     echo ""
 fi
 echo "Credential setup (do these once):"
-echo "  1. SSH keys:     Copy from 1Password → ~/.ssh/, then chmod 600"
+echo "  1. SSH keys:     Copy .pub files to ~/.ssh/ (chmod 644)"
+echo "                   Private keys stay in 1Password — SSH agent serves them"
 {{ if .has_work_creds -}}
 echo "  2. AWS:          aws sso login --profile <name>"
 {{ end -}}
@@ -164,5 +169,13 @@ echo "  5. GitHub:       gh auth login"
 {{ if ne .atuin_account "none" -}}
 echo "  6. Atuin:        atuin login -u {{ .atuin_account }}"
 {{ end -}}
+if [ "$IS_AURORA" = true ]; then
+    echo ""
+    echo "Aurora-specific setup:"
+    echo "  - Shell: In Ptyxis, edit the default profile → Custom Command → /home/linuxbrew/.linuxbrew/bin/zsh"
+    echo "  - DO NOT use chsh — atomic systems don't have it"
+    echo "  - 1Password: rpm-ostree install 1password 1password-cli && reboot"
+    echo "  - Enable SSH Agent in 1Password → Settings → Developer"
+fi
 echo ""
 echo "Restart your shell or run: exec zsh"
