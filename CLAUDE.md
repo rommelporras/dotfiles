@@ -40,7 +40,7 @@ dotfiles/
 |---|---|---|---|
 | wsl-work | WSL2 Ubuntu | 1Password via npiperelay | Work + personal creds, NVM/Bun |
 | wsl-gaming | WSL2 Ubuntu | 1Password via npiperelay | Work + personal creds, NVM/Bun |
-| aurora | Aurora DX host | 1Password native socket | Immutable OS, bling.sh, no chsh |
+| aurora | Aurora DX host | 1Password native socket | Immutable OS, bling.sh, no chsh, Atuin sync |
 | distrobox-work | Ubuntu container | Inherited from host | Work AWS/EKS creds |
 | distrobox-personal | Ubuntu container | Inherited from host | Homelab kubeconfig, glab |
 | distrobox-sandbox | Ubuntu container | Fallback ssh-agent | No creds, no Claude config |

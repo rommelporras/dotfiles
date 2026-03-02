@@ -205,7 +205,7 @@ atuin login -u <account-name>
 ### 3. Aurora DX only: set up Distrobox containers
 
 ```bash
-~/.local/share/chezmoi/scripts/distrobox-setup.sh
+~/personal/dotfiles/scripts/distrobox-setup.sh
 ```
 
 This creates three containers (`work`, `personal`, `sandbox`) with separate home
