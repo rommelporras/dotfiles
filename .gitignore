@@ -35,7 +35,7 @@ id_*
 .config/op/
 
 # Downloaded binaries (chezmoi installer drops binary here)
-bin/
+/bin/
 
 # OS and editor
 .DS_Store

@@ -43,6 +43,7 @@ docs/
 # Skip Claude config on sandbox (AI sandbox uses --dangerously-skip-permissions)
 {{- if eq .context "sandbox" }}
 .claude/
+.local/bin/setup-creds
 {{- end }}
 
 # Aurora host: deploy Claude config (user runs Claude Code directly on host)

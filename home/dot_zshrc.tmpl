@@ -76,11 +76,25 @@ fi
 {{ else if eq .platform "aurora" -}}
 # 1Password SSH Agent (native Linux — socket created by 1Password app)
 export SSH_AUTH_SOCK="$HOME/.1password/agent.sock"
+{{ else if ne .context "sandbox" -}}
+# 1Password SSH Agent (host socket — $HOME differs inside distrobox, use absolute path)
+export SSH_AUTH_SOCK="/home/{{ .chezmoi.username }}/.1password/agent.sock"
 {{ else -}}
-# SSH agent fallback (distrobox inherits host agent, or starts its own)
+# SSH agent fallback (sandbox — no 1Password access)
 if [ -z "$SSH_AUTH_SOCK" ]; then
     eval "$(ssh-agent -s)" > /dev/null
 fi
+{{ end -}}
+
+{{ if eq .platform "distrobox" -}}
+{{ if ne .context "sandbox" -}}
+# ─── IDE forwarding (host apps via distrobox-host-exec) ─────────────
+# VS Code runs on the Aurora host; this wrapper forwards the command
+# so 'code .' works transparently from inside containers.
+if command -v distrobox-host-exec &>/dev/null; then
+    alias code='distrobox-host-exec code'
+fi
+{{ end -}}
 {{ end -}}
 
 # ─── Source bling.sh on Aurora (eza, bat, direnv, zoxide, mise, ugrep) ──

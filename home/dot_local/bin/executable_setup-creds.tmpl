@@ -1,0 +1,62 @@
+#!/bin/bash
+set -euo pipefail
+
+# Credential seeding for Distrobox containers.
+# Calls 1Password on the Aurora host via distrobox-host-exec.
+# Run once after first container bootstrap.
+
+if [ -z "${DISTROBOX_ENTER_PATH:-}" ]; then
+    echo "Error: This script is for Distrobox containers only."
+    exit 1
+fi
+
+if ! command -v distrobox-host-exec &>/dev/null; then
+    echo "Error: distrobox-host-exec not found."
+    exit 1
+fi
+
+OP="distrobox-host-exec op"
+
+echo "=== Credential Setup ==="
+echo "This will prompt 1Password on the host for authentication."
+echo ""
+
+{{ if ne .atuin_account "none" -}}
+# ─── Atuin ────────────────────────────────────────────────────────────
+if command -v atuin &>/dev/null; then
+    echo "--- Atuin ({{ .atuin_account }}) ---"
+    ATUIN_PASS=$($OP read "op://Kubernetes/Atuin/{{ if eq .atuin_account "rommel-work" }}work{{ else }}personal{{ end }}-password")
+    ATUIN_KEY=$($OP read "op://Kubernetes/Atuin/encryption-key")
+    atuin login -u "{{ .atuin_account }}" -p "$ATUIN_PASS" --key "$ATUIN_KEY"
+    atuin sync
+    echo "Atuin: done"
+else
+    echo "Atuin: not installed, skipping"
+fi
+{{ end -}}
+
+{{ if .has_homelab_creds -}}
+# ─── GitLab (self-hosted) ────────────────────────────────────────────
+if command -v glab &>/dev/null; then
+    echo "--- GitLab (gitlab.k8s.rommelporras.com) ---"
+    GLAB_TOKEN=$($OP read "op://Kubernetes/Gitlab/personal-access-token")
+    echo "$GLAB_TOKEN" | glab auth login --hostname gitlab.k8s.rommelporras.com --stdin
+    echo "glab: done"
+else
+    echo "glab: not installed, skipping"
+fi
+
+# ─── Kubeconfig (homelab) ────────────────────────────────────────────
+echo "--- Kubeconfig ---"
+echo "Manual step: copy homelab.yaml to ~/.kube/"
+echo "  From host: cp ~/.kube/homelab.yaml ~/.distrobox/{{ .context }}/.kube/"
+{{ end -}}
+
+{{ if .has_work_creds -}}
+# ─── AWS ──────────────────────────────────────────────────────────────
+echo "--- AWS ---"
+echo "Manual step: run 'aws sso login --profile <name>' after setup"
+{{ end -}}
+
+echo ""
+echo "=== Done ==="

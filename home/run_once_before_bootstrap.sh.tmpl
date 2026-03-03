@@ -180,5 +180,10 @@ if [ "$IS_AURORA" = true ]; then
     echo "  - 1Password: rpm-ostree install 1password 1password-cli && reboot"
     echo "  - Enable SSH Agent in 1Password → Settings → Developer"
 fi
+if [ "$IS_DISTROBOX" = true ]; then
+    echo "Distrobox credential seeding:"
+    echo "  Run 'setup-creds' to seed credentials from 1Password (requires host unlock)"
+    echo ""
+fi
 echo ""
 echo "Restart your shell or run: exec zsh"
