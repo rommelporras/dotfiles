@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.2.0] - 2026-03-03
+
+### Added
+
+- Windows git setup script for 1Password SSH agent integration (`scripts/windows-git-setup.ps1`)
+
 ## [v1.1.1] - 2026-03-03
 
 ### Fixed
