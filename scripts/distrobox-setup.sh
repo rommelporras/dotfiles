@@ -5,7 +5,14 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(dirname "$SCRIPT_DIR")"
 DISTROBOX_INI="$REPO_DIR/containers/distrobox.ini"
 
-echo "=== Distrobox Container Setup ==="
+usage() {
+    echo "Usage: $(basename "$0") [work|personal|sandbox]"
+    echo ""
+    echo "Set up Distrobox containers and bootstrap chezmoi inside them."
+    echo "With no argument, sets up all three containers."
+    echo "With an argument, sets up only the specified container."
+    exit 1
+}
 
 # Verify we're on Aurora/Bluefin (not WSL)
 if grep -qi microsoft /proc/version 2>/dev/null; then
@@ -19,12 +26,27 @@ if ! command -v distrobox &>/dev/null; then
     exit 1
 fi
 
+# Determine which containers to set up
+if [ $# -eq 0 ]; then
+    CONTAINERS=(work personal sandbox)
+elif [ $# -eq 1 ]; then
+    case "$1" in
+        work|personal|sandbox) CONTAINERS=("$1") ;;
+        -h|--help) usage ;;
+        *) echo "Error: unknown container '$1'. Choose: work, personal, sandbox"; exit 1 ;;
+    esac
+else
+    usage
+fi
+
+echo "=== Distrobox Container Setup ==="
+
 # Create containers from ini file
 echo "Creating Distrobox containers from $DISTROBOX_INI..."
 distrobox assemble create --file "$DISTROBOX_INI"
 
 # Bootstrap dotfiles inside each container
-for container in work personal sandbox; do
+for container in "${CONTAINERS[@]}"; do
     echo ""
     echo "--- Bootstrapping '$container' container ---"
     echo "chezmoi will prompt for environment-specific settings."
@@ -34,5 +56,5 @@ for container in work personal sandbox; do
 done
 
 echo ""
-echo "=== All containers ready ==="
-echo "Enter a container: distrobox enter work|personal|sandbox"
+echo "=== Done ==="
+echo "Enter a container: distrobox enter ${CONTAINERS[*]}"

@@ -75,7 +75,7 @@ if ! ps aux | grep -q "[n]piperelay.exe -ei -s //./pipe/openssh-ssh-agent"; then
 fi
 {{ else if eq .environment "aurora" -}}
 # 1Password SSH Agent (native Linux — socket created by 1Password app)
-export SSH_AUTH_SOCK="$HOME/.1Password/agent.sock"
+export SSH_AUTH_SOCK="$HOME/.1password/agent.sock"
 {{ else -}}
 # SSH agent fallback (distrobox inherits host agent, or starts its own)
 if [ -z "$SSH_AUTH_SOCK" ]; then

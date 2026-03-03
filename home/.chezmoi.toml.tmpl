@@ -1,10 +1,33 @@
 {{- $environment := promptStringOnce . "environment" "Environment (wsl-work/wsl-gaming/aurora/distrobox-work/distrobox-personal/distrobox-sandbox)" -}}
-{{- $personalEmail := promptStringOnce . "personal_email" "Personal git email" -}}
-{{- $workEmail := promptStringOnce . "work_email" "Work git email (blank to skip)" -}}
-{{- $hasWorkCreds := promptBoolOnce . "has_work_creds" "Does this machine have work credentials (AWS, EKS)" -}}
-{{- $hasHomelabCreds := promptBoolOnce . "has_homelab_creds" "Does this machine have homelab credentials" -}}
-{{- $atuinSyncAddress := promptStringOnce . "atuin_sync_address" "Atuin sync server URL (blank for none yet)" -}}
-{{- $atuinAccount := promptStringOnce . "atuin_account" "Atuin account (rommel-personal/rommel-work/none)" -}}
+
+{{/* Smart defaults — only prompt for what's relevant to this environment */}}
+{{- $personalEmail := "" -}}
+{{- $workEmail := "" -}}
+{{- $hasWorkCreds := false -}}
+{{- $hasHomelabCreds := false -}}
+{{- $atuinSyncAddress := "" -}}
+{{- $atuinAccount := "none" -}}
+
+{{- if or (eq $environment "aurora") (eq $environment "wsl-work") (eq $environment "wsl-gaming") (eq $environment "distrobox-personal") -}}
+{{-   $personalEmail = promptStringOnce . "personal_email" "Personal git email" -}}
+{{- end -}}
+
+{{- if or (eq $environment "wsl-work") (eq $environment "wsl-gaming") (eq $environment "distrobox-work") -}}
+{{-   $workEmail = promptStringOnce . "work_email" "Work git email" -}}
+{{- end -}}
+
+{{- if or (eq $environment "wsl-work") (eq $environment "wsl-gaming") (eq $environment "distrobox-work") -}}
+{{-   $hasWorkCreds = promptBoolOnce . "has_work_creds" "Work credentials — AWS, EKS? (y/N)" -}}
+{{- end -}}
+
+{{- if or (eq $environment "aurora") (eq $environment "wsl-work") (eq $environment "wsl-gaming") (eq $environment "distrobox-personal") -}}
+{{-   $hasHomelabCreds = promptBoolOnce . "has_homelab_creds" "Homelab credentials? (y/N)" -}}
+{{- end -}}
+
+{{- if ne $environment "distrobox-sandbox" -}}
+{{-   $atuinSyncAddress = promptStringOnce . "atuin_sync_address" "Atuin sync server URL (blank to skip)" -}}
+{{-   $atuinAccount = promptStringOnce . "atuin_account" "Atuin account (rommel-personal/rommel-work/none)" -}}
+{{- end -}}
 
 [data]
   environment = {{ $environment | quote }}

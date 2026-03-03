@@ -104,7 +104,7 @@ Continue to [Install chezmoi](#1-install-chezmoi-and-apply-dotfiles).
 
 6. Open 1Password → sign in → Settings → Developer → enable **SSH Agent**
 7. Settings → Security → enable **Unlock using system authentication** (uses Aurora user password or fingerprint)
-8. SSH agent socket is at `~/.1Password/agent.sock` (capital P).
+8. SSH agent socket is at `~/.1password/agent.sock` (lowercase p).
    After chezmoi apply, `.zshrc` sets `SSH_AUTH_SOCK` automatically.
 
 9. Install Claude Code:
@@ -216,10 +216,13 @@ aws eks update-kubeconfig --name <cluster> --region <region>
 cp homelab.yaml ~/.kube/
 
 # GitLab (personal environments only)
-glab auth login --hostname gitlab.k8s.rommelporras.com
+glab auth login --hostname gitlab.k8s.rommelporras.com \
+  --token "$(op read 'op://Kubernetes/Gitlab/personal-access-token')"
 
 # Atuin (if configured)
-atuin login -u <account-name>
+atuin login -u <account-name> \
+  -p "$(op read 'op://Kubernetes/Atuin/personal-password')" \
+  -k "$(op read 'op://Kubernetes/Atuin/encryption-key')"
 ```
 
 ### 3. Aurora DX only: set up Distrobox containers

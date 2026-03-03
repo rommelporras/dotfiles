@@ -34,6 +34,9 @@ id_*
 .config/gh/hosts.yml
 .config/op/
 
+# Downloaded binaries (chezmoi installer drops binary here)
+bin/
+
 # OS and editor
 .DS_Store
 Thumbs.db

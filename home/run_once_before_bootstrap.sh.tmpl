@@ -120,8 +120,10 @@ fi
 # glab CLI
 if ! command -v glab &>/dev/null; then
     echo "Installing glab..."
-    curl -sL "https://gitlab.com/gitlab-org/cli/-/releases/permalink/latest/downloads/glab_$(uname -s)_$(uname -m).tar.gz" | tar xz -C /tmp
-    sudo mv /tmp/bin/glab /usr/local/bin/
+    GLAB_VERSION=$(curl -sI "https://gitlab.com/gitlab-org/cli/-/releases/permalink/latest" | grep -i location | grep -oP 'v\K[0-9.]+')
+    curl -sLo /tmp/glab.deb "https://gitlab.com/gitlab-org/cli/-/releases/v${GLAB_VERSION}/downloads/glab_${GLAB_VERSION}_linux_amd64.deb"
+    sudo dpkg -i /tmp/glab.deb
+    rm -f /tmp/glab.deb
 fi
 
 # Ansible
