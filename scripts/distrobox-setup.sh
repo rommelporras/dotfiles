@@ -49,10 +49,9 @@ distrobox assemble create --file "$DISTROBOX_INI"
 for container in "${CONTAINERS[@]}"; do
     echo ""
     echo "--- Bootstrapping '$container' container ---"
-    echo "chezmoi will prompt for environment-specific settings."
-    echo "Use environment: distrobox-$container"
+    echo "Environment: distrobox-$container (auto-set)"
     echo ""
-    distrobox enter "$container" -- sh -c 'curl -fsLS get.chezmoi.io | sh -s -- init --apply rommelporras'
+    distrobox enter "$container" -- sh -c "curl -fsLS get.chezmoi.io | sh -s -- init --apply rommelporras --promptString environment=distrobox-$container"
 done
 
 echo ""
