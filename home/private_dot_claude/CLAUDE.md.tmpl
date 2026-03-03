@@ -17,9 +17,9 @@ Project CLAUDE.md files add project-specific context on top of this.
   `kubectl delete`, `helm uninstall`, or anything that destroys data requires
   explicit user confirmation before running.
 
-{{- if or (eq .environment "wsl-work") (eq .environment "wsl-gaming") }}
+{{- if eq .platform "wsl" }}
 
-## Personal Environment (WSL2)
+## Environment (WSL2)
 
 - Shell: zsh.
 - Windows Chrome for browser automation at the standard Windows path.
@@ -31,7 +31,7 @@ Project CLAUDE.md files add project-specific context on top of this.
   for GitLab API operations (issues, CI/CD, releases).
 {{- end }}
 
-{{- if eq .environment "distrobox-personal" }}
+{{- if and (eq .platform "distrobox") (eq .context "personal") }}
 
 ## Personal Environment (Distrobox)
 
@@ -44,7 +44,7 @@ Project CLAUDE.md files add project-specific context on top of this.
   for GitLab API operations (issues, CI/CD, releases).
 {{- end }}
 
-{{- if eq .environment "distrobox-work" }}
+{{- if and (eq .platform "distrobox") (hasPrefix "work-" .context) }}
 
 ## Work Environment (Distrobox)
 
@@ -52,7 +52,7 @@ Project CLAUDE.md files add project-specific context on top of this.
 - Work projects use GitHub; personal projects use self-hosted GitLab.
 {{- end }}
 
-{{- if eq .environment "aurora" }}
+{{- if eq .platform "aurora" }}
 
 ## Personal Environment (Aurora DX)
 

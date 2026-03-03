@@ -48,7 +48,7 @@ plugins=(
 source $ZSH/oh-my-zsh.sh
 
 # Starship prompt (Aurora: system /etc/zsh/zshrc already inits starship)
-{{ if ne .environment "aurora" -}}
+{{ if ne .platform "aurora" -}}
 command -v starship &>/dev/null && eval "$(starship init zsh)"
 {{ end -}}
 
@@ -59,13 +59,13 @@ command -v atuin &>/dev/null && eval "$(atuin init zsh)"
 {{ end -}}
 
 # FZF (Aurora has system FZF at /usr/share/fzf/shell/, others use git install)
-{{ if eq .environment "aurora" -}}
+{{ if eq .platform "aurora" -}}
 [ -f /usr/share/fzf/shell/key-bindings.zsh ] && source /usr/share/fzf/shell/key-bindings.zsh
 {{ else -}}
 [ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
 {{ end -}}
 
-{{ if or (eq .environment "wsl-work") (eq .environment "wsl-gaming") -}}
+{{ if eq .platform "wsl" -}}
 # 1Password SSH Agent bridge (WSL → Windows named pipe via npiperelay)
 export SSH_AUTH_SOCK="$HOME/.1password/agent.sock"
 if ! ps aux | grep -q "[n]piperelay.exe -ei -s //./pipe/openssh-ssh-agent"; then
@@ -73,7 +73,7 @@ if ! ps aux | grep -q "[n]piperelay.exe -ei -s //./pipe/openssh-ssh-agent"; then
     [ -S "$SSH_AUTH_SOCK" ] && rm "$SSH_AUTH_SOCK"
     (setsid socat UNIX-LISTEN:"$SSH_AUTH_SOCK",fork EXEC:"npiperelay.exe -ei -s //./pipe/openssh-ssh-agent",nofork &) >/dev/null 2>&1
 fi
-{{ else if eq .environment "aurora" -}}
+{{ else if eq .platform "aurora" -}}
 # 1Password SSH Agent (native Linux — socket created by 1Password app)
 export SSH_AUTH_SOCK="$HOME/.1password/agent.sock"
 {{ else -}}
@@ -84,12 +84,12 @@ fi
 {{ end -}}
 
 # ─── Source bling.sh on Aurora (eza, bat, direnv, zoxide, mise, ugrep) ──
-{{ if eq .environment "aurora" -}}
+{{ if eq .platform "aurora" -}}
 test -f /usr/share/ublue-os/bling/bling.sh && source /usr/share/ublue-os/bling/bling.sh
 {{ end -}}
 
 # ─── Universal aliases ───────────────────────────────────────────────
-{{ if ne .environment "aurora" -}}
+{{ if ne .platform "aurora" -}}
 alias ll="ls -ltra"
 {{ end -}}
 alias gd="git diff"
@@ -99,7 +99,7 @@ alias gitm="git checkout master"
 alias zshconfig="${EDITOR:-code} ~/.zshrc"
 alias pip=pip3
 
-{{ if or (eq .environment "wsl-work") (eq .environment "wsl-gaming") -}}
+{{ if eq .platform "wsl" -}}
 # ─── WSL-only ────────────────────────────────────────────────────────
 alias pbcopy='xclip -selection clipboard'
 alias pbpaste='xclip -selection clipboard -o'
@@ -115,11 +115,15 @@ export PATH="$BUN_INSTALL/bin:$PATH"
 [ -s "$BUN_INSTALL/_bun" ] && source "$BUN_INSTALL/_bun"
 {{ end -}}
 
-{{ if or (eq .environment "wsl-work") (eq .environment "wsl-gaming") (eq .environment "distrobox-work") -}}
-# ─── Work context ────────────────────────────────────────────────────
+{{ if hasPrefix "work-" .context -}}
+# ─── Shared work tools ───────────────────────────────────────────────
 alias tfi="terraform init -reconfigure"
 alias tfp="terraform plan"
 alias tfwl="terraform workspace list"
+{{ end -}}
+
+{{ if eq .context "work-eam" -}}
+# ─── EAM-specific ────────────────────────────────────────────────────
 alias eam='cd ~/eam'
 alias eam-sre='cd ~/eam/eam-sre/rommel-porras'
 alias eam-terraform='cd ~/eam/eam-terraform'
@@ -127,7 +131,7 @@ alias nightly-restart='cd ~/eam/eam-nightly-restart'
 alias tmp='cd ~/eam/tmp'
 {{ end -}}
 
-{{ if or (eq .environment "wsl-work") (eq .environment "wsl-gaming") (eq .environment "aurora") (eq .environment "distrobox-personal") -}}
+{{ if or (eq .context "personal") (eq .context "gaming") -}}
 # ─── Personal/homelab context ────────────────────────────────────────
 alias personal='cd ~/personal'
 alias invoicetron='cd ~/personal/invoicetron'

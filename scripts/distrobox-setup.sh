@@ -6,10 +6,10 @@ REPO_DIR="$(dirname "$SCRIPT_DIR")"
 DISTROBOX_INI="$REPO_DIR/containers/distrobox.ini"
 
 usage() {
-    echo "Usage: $(basename "$0") [work|personal|sandbox]"
+    echo "Usage: $(basename "$0") [work-eam|work-<name>|personal|sandbox]"
     echo ""
     echo "Set up Distrobox containers and bootstrap chezmoi inside them."
-    echo "With no argument, sets up all three containers."
+    echo "With no argument, sets up all containers defined in distrobox.ini."
     echo "With an argument, sets up only the specified container."
     exit 1
 }
@@ -28,12 +28,12 @@ fi
 
 # Determine which containers to set up
 if [ $# -eq 0 ]; then
-    CONTAINERS=(work personal sandbox)
+    CONTAINERS=(work-eam personal sandbox)
 elif [ $# -eq 1 ]; then
     case "$1" in
-        work|personal|sandbox) CONTAINERS=("$1") ;;
+        work-*|personal|sandbox) CONTAINERS=("$1") ;;
         -h|--help) usage ;;
-        *) echo "Error: unknown container '$1'. Choose: work, personal, sandbox"; exit 1 ;;
+        *) echo "Error: unknown container '$1'. Choose: work-<name>, personal, sandbox"; exit 1 ;;
     esac
 else
     usage
@@ -49,9 +49,9 @@ distrobox assemble create --file "$DISTROBOX_INI"
 for container in "${CONTAINERS[@]}"; do
     echo ""
     echo "--- Bootstrapping '$container' container ---"
-    echo "Environment: distrobox-$container (auto-set)"
+    echo "Context: $container (platform auto-detected as distrobox)"
     echo ""
-    distrobox enter "$container" -- sh -c "curl -fsLS get.chezmoi.io | sh -s -- init --apply rommelporras --promptString environment=distrobox-$container"
+    distrobox enter "$container" -- sh -c "curl -fsLS get.chezmoi.io | sh -s -- init --apply rommelporras --promptString context=$container"
 done
 
 echo ""

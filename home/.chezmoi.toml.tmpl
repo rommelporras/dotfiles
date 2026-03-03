@@ -1,6 +1,16 @@
-{{- $environment := promptStringOnce . "environment" "Environment (wsl-work/wsl-gaming/aurora/distrobox-work/distrobox-personal/distrobox-sandbox)" -}}
+{{/* Auto-detect platform — never prompted */}}
+{{- $platform := "unknown" -}}
+{{- if env "DISTROBOX_ENTER_PATH" -}}
+{{-   $platform = "distrobox" -}}
+{{- else if and (stat "/etc/os-release") (contains "aurora" (lower (include "/etc/os-release"))) -}}
+{{-   $platform = "aurora" -}}
+{{- else if and (stat "/proc/version") (contains "microsoft" (lower (include "/proc/version"))) -}}
+{{-   $platform = "wsl" -}}
+{{- end -}}
 
-{{/* Smart defaults — only prompt for what's relevant to this environment */}}
+{{- $context := promptStringOnce . "context" "Context (personal/work-eam/work-<name>/gaming/sandbox)" -}}
+
+{{/* Smart defaults — only prompt for what's relevant */}}
 {{- $personalEmail := "" -}}
 {{- $workEmail := "" -}}
 {{- $hasWorkCreds := false -}}
@@ -8,29 +18,30 @@
 {{- $atuinSyncAddress := "" -}}
 {{- $atuinAccount := "none" -}}
 
-{{- if or (eq $environment "aurora") (eq $environment "wsl-work") (eq $environment "wsl-gaming") (eq $environment "distrobox-personal") -}}
+{{- if and (ne $context "sandbox") (or (not (hasPrefix "work-" $context)) (eq $platform "wsl")) -}}
 {{-   $personalEmail = promptStringOnce . "personal_email" "Personal git email (e.g. you@example.com)" -}}
 {{- end -}}
 
-{{- if or (eq $environment "wsl-work") (eq $environment "wsl-gaming") (eq $environment "distrobox-work") -}}
+{{- if hasPrefix "work-" $context -}}
 {{-   $workEmail = promptStringOnce . "work_email" "Work git email (e.g. you@company.com)" -}}
 {{- end -}}
 
-{{- if or (eq $environment "wsl-work") (eq $environment "wsl-gaming") (eq $environment "distrobox-work") -}}
+{{- if hasPrefix "work-" $context -}}
 {{-   $hasWorkCreds = promptBoolOnce . "has_work_creds" "Work credentials — AWS, EKS? (y/N)" -}}
 {{- end -}}
 
-{{- if or (eq $environment "aurora") (eq $environment "wsl-work") (eq $environment "wsl-gaming") (eq $environment "distrobox-personal") -}}
+{{- if or (eq $context "personal") (eq $context "gaming") (eq $platform "aurora") -}}
 {{-   $hasHomelabCreds = promptBoolOnce . "has_homelab_creds" "Homelab credentials? (y/N)" -}}
 {{- end -}}
 
-{{- if ne $environment "distrobox-sandbox" -}}
+{{- if ne $context "sandbox" -}}
 {{-   $atuinSyncAddress = promptStringOnce . "atuin_sync_address" "Atuin sync server URL (e.g. https://atuin.k8s.rommelporras.com, blank to skip)" -}}
 {{-   $atuinAccount = promptStringOnce . "atuin_account" "Atuin account (rommel-personal/rommel-work/none)" -}}
 {{- end -}}
 
 [data]
-  environment = {{ $environment | quote }}
+  platform = {{ $platform | quote }}
+  context = {{ $context | quote }}
   personal_email = {{ $personalEmail | quote }}
   work_email = {{ $workEmail | quote }}
   has_work_creds = {{ $hasWorkCreds }}

@@ -2,7 +2,7 @@
 set -euo pipefail
 
 echo "=== Dotfiles bootstrap ==="
-echo "Environment: {{ .environment }}"
+echo "Platform: {{ .platform }}, Context: {{ .context }}"
 
 # Detect platform
 IS_WSL=false
@@ -19,7 +19,7 @@ if [ -n "${DISTROBOX_ENTER_PATH:-}" ]; then
     IS_DISTROBOX=true
 fi
 
-echo "Platform: WSL=$IS_WSL, Aurora=$IS_AURORA, Distrobox=$IS_DISTROBOX"
+echo "Runtime: WSL=$IS_WSL, Aurora=$IS_AURORA, Distrobox=$IS_DISTROBOX"
 
 # ─── Claude Code: replace old symlinks with chezmoi-managed files ────
 
@@ -91,7 +91,7 @@ fi
 
 # ─── Environment-specific tools ──────────────────────────────────────
 
-{{ if or (eq .environment "wsl-work") (eq .environment "wsl-gaming") -}}
+{{ if eq .platform "wsl" -}}
 # NVM (WSL only)
 if [ ! -d "$HOME/.nvm" ]; then
     echo "Installing nvm..."
@@ -105,8 +105,8 @@ if ! command -v bun &>/dev/null; then
 fi
 {{ end -}}
 
-{{ if or (eq .environment "distrobox-work") (eq .environment "wsl-work") (eq .environment "wsl-gaming") -}}
-# Terraform
+{{ if hasPrefix "work-" .context -}}
+# Terraform (work contexts)
 if ! command -v terraform &>/dev/null && [ "$IS_DISTROBOX" = true ]; then
     echo "Installing terraform..."
     sudo apt-get install -y -qq gnupg software-properties-common
@@ -116,8 +116,8 @@ if ! command -v terraform &>/dev/null && [ "$IS_DISTROBOX" = true ]; then
 fi
 {{ end -}}
 
-{{ if or (eq .environment "distrobox-personal") -}}
-# glab CLI
+{{ if and (eq .context "personal") (eq .platform "distrobox") -}}
+# glab CLI (personal distrobox only — Aurora installs via brew)
 if ! command -v glab &>/dev/null; then
     echo "Installing glab..."
     GLAB_VERSION=$(curl -sI "https://gitlab.com/gitlab-org/cli/-/releases/permalink/latest" | grep -i location | grep -oP 'v\K[0-9.]+')
@@ -126,7 +126,7 @@ if ! command -v glab &>/dev/null; then
     rm -f /tmp/glab.deb
 fi
 
-# Ansible
+# Ansible (personal distrobox only — Aurora installs via brew)
 if ! command -v ansible &>/dev/null; then
     echo "Installing ansible..."
     sudo apt-get install -y -qq ansible

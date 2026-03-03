@@ -41,7 +41,7 @@ docs/
 .claude/double-shot-latte/
 
 # Skip Claude config on sandbox (AI sandbox uses --dangerously-skip-permissions)
-{{- if eq .environment "distrobox-sandbox" }}
+{{- if eq .context "sandbox" }}
 .claude/
 {{- end }}
 

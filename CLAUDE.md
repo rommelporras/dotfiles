@@ -3,8 +3,9 @@
 ## Project Overview
 
 chezmoi-managed dotfiles repository for bootstrapping consistent dev environments across
-WSL2 (Ubuntu 24.04), Aurora DX (immutable Fedora), and Distrobox containers. Supports
-6 target environments with credential isolation and AI agent sandboxing.
+WSL2 (Ubuntu 24.04), Aurora DX (immutable Fedora), and Distrobox containers. Uses a
+two-variable model (`platform` + `context`) for scalable environment targeting with
+credential isolation and AI agent sandboxing.
 
 ## Repository Structure
 
@@ -34,16 +35,25 @@ dotfiles/
 - `run_once_before_` prefix → script that runs once on first apply, before files
 - Template data defined in `.chezmoi.toml.tmpl`, stored locally in `~/.config/chezmoi/chezmoi.toml`
 
-## Environment Matrix
+## Environment Model
 
-| Environment | Platform | SSH Agent | Key differences |
+Templates use two variables:
+
+- **`platform`** (auto-detected): `wsl`, `aurora`, `distrobox` — controls SSH agent, package manager, system paths
+- **`context`** (user-selected): `personal`, `work-eam`, `work-<name>`, `gaming`, `sandbox` — controls aliases, credentials, tools
+
+| Platform | Context | SSH Agent | Key differences |
 |---|---|---|---|
-| wsl-work | WSL2 Ubuntu | 1Password via npiperelay | Work + personal creds, NVM/Bun |
-| wsl-gaming | WSL2 Ubuntu | 1Password via npiperelay | Work + personal creds, NVM/Bun |
-| aurora | Aurora DX host | 1Password native socket | Immutable OS, bling.sh, no chsh, Atuin sync |
-| distrobox-work | Ubuntu container | Inherited from host | Work AWS/EKS creds |
-| distrobox-personal | Ubuntu container | Inherited from host | Homelab kubeconfig, glab |
-| distrobox-sandbox | Ubuntu container | Fallback ssh-agent | No creds, no Claude config |
+| wsl | work-eam | 1Password via npiperelay | NVM/Bun, work + personal creds |
+| wsl | gaming | 1Password via npiperelay | NVM/Bun, personal creds |
+| aurora | personal | 1Password native socket | Immutable OS, bling.sh, no chsh, Atuin sync |
+| distrobox | work-eam | Inherited from host | Work AWS/EKS creds, Terraform |
+| distrobox | personal | Inherited from host | Homelab kubeconfig, glab, Ansible |
+| distrobox | sandbox | Fallback ssh-agent | No creds, no Claude config |
+
+Adding a new work context (e.g., `work-acme`): add container to `distrobox.ini`, add
+job-specific aliases in `dot_zshrc.tmpl`, run `distrobox-setup.sh work-acme`. Shared
+work tools (Terraform, work email) apply automatically via `hasPrefix .context "work-"`.
 
 ## Common Commands
 
@@ -73,7 +83,7 @@ chezmoi update
 `home/private_dot_claude/` deploys to `~/.claude/` — Claude Code's global config.
 Non-exact directory (chezmoi won't delete runtime files like `history.jsonl`, `projects/`, etc.).
 
-- `CLAUDE.md.tmpl` — templated, conditional environment section (WSL, Aurora, Distrobox variants)
+- `CLAUDE.md.tmpl` — templated, conditional section keyed on `platform` + `context`
 - `settings.json` — same everywhere (hooks use `$HOME` which resolves correctly)
 - `hooks/` — executable_ prefix for chezmoi to set +x permissions
 - `agents/`, `skills/` — plain files, no templating needed

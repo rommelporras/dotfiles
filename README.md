@@ -16,14 +16,20 @@ Aurora DX, and Distrobox containers.
 
 ## Supported Environments
 
-| Environment | Platform | Description |
+Templates use two variables: **platform** (auto-detected) and **context** (user-selected).
+
+| Platform | Context | Description |
 |---|---|---|
-| `wsl-work` | WSL2 Ubuntu | Work laptop — work + personal projects |
-| `wsl-gaming` | WSL2 Ubuntu | Gaming desktop — work + personal projects |
-| `aurora` | Aurora DX host | Personal laptop — launches Distrobox containers |
-| `distrobox-work` | Ubuntu container | Work projects with work credentials |
-| `distrobox-personal` | Ubuntu container | Personal projects with homelab credentials |
-| `distrobox-sandbox` | Ubuntu container | Clean experiment space, no credentials |
+| `wsl` | `work-eam` | Work laptop — EAM work projects |
+| `wsl` | `gaming` | Gaming desktop — personal projects |
+| `aurora` | `personal` | Personal laptop — launches Distrobox containers |
+| `distrobox` | `work-eam` | Work projects with work credentials |
+| `distrobox` | `personal` | Personal projects with homelab credentials |
+| `distrobox` | `sandbox` | Clean experiment space, no credentials |
+
+Adding a new work context (e.g., `work-acme`): add a container to `containers/distrobox.ini`,
+add job-specific aliases in `dot_zshrc.tmpl`, run `distrobox-setup.sh work-acme`. Shared work
+tools (Terraform, work email) apply automatically via `hasPrefix .context "work-"`.
 
 ## Quick Start
 
@@ -145,14 +151,15 @@ chezmoi will ask you:
 
 | Prompt | What to enter |
 |---|---|
-| Environment | One of: `wsl-work`, `wsl-gaming`, `aurora`, `distrobox-work`, `distrobox-personal`, `distrobox-sandbox` |
-| Personal git email | Your personal email for git commits |
-| Work git email | Your work email (leave blank to skip) |
-| Work credentials? | `true` if this machine has AWS/EKS access |
-| Homelab credentials? | `true` if this machine has homelab kubeconfig |
+| Context | `personal`, `work-eam`, `work-<name>`, `gaming`, or `sandbox` |
+| Personal git email | Your personal email (skipped for sandbox and non-WSL work contexts) |
+| Work git email | Your work email (only for `work-*` contexts) |
+| Work credentials? | `true` if this machine has AWS/EKS access (only for `work-*` contexts) |
+| Homelab credentials? | `true` if this machine has homelab kubeconfig (personal/gaming/aurora) |
 | Atuin sync server URL | Your self-hosted Atuin URL (leave blank if not set up yet) |
 | Atuin account | Your Atuin username, or `none` to skip |
 
+Platform (`wsl`, `aurora`, `distrobox`) is auto-detected — you'll never be prompted for it.
 Answers are saved locally to `~/.config/chezmoi/chezmoi.toml` and never committed.
 
 The bootstrap script automatically installs: zsh, Starship, and environment-specific
@@ -231,14 +238,13 @@ atuin login -u <account-name> \
 ~/personal/dotfiles/scripts/distrobox-setup.sh
 ```
 
-This creates three containers (`work`, `personal`, `sandbox`) with separate home
-directories and bootstraps chezmoi inside each one. You'll answer the prompts
-once per container.
+This creates containers (`work-eam`, `personal`, `sandbox`) with separate home
+directories and bootstraps chezmoi inside each one. The context is passed automatically.
 
 Enter a container:
 
 ```bash
-distrobox enter work      # or: personal, sandbox
+distrobox enter work-eam  # or: personal, sandbox
 ```
 
 ### 4. Aurora DX only: build AI sandbox
@@ -338,11 +344,11 @@ podman secret create gemini_key <(echo "AI...")
 
 | Scenario | Where | Why |
 |---|---|---|
-| Daily dev with cluster access | `distrobox-personal` | Needs kubeconfig, SSH keys |
+| Daily dev with cluster access | `distrobox enter personal` | Needs kubeconfig, SSH keys |
 | Vibe-coding with git push | `ai-sandbox --git` | Contained, can push via deploy key |
 | Trying untrusted AI tool | `ai-sandbox --no-network` | No network, can't exfiltrate |
-| Work Terraform/EKS | `distrobox-work` | Needs AWS + EKS credentials |
-| Quick experiment | `distrobox-sandbox` | Clean space, no credentials |
+| Work Terraform/EKS | `distrobox enter work-eam` | Needs AWS + EKS credentials |
+| Quick experiment | `distrobox enter sandbox` | Clean space, no credentials |
 
 ## Terminal Setup
 
@@ -454,15 +460,15 @@ replaces the old `claude-config` repo that used symlinks.
 
 ### Environment differences
 
-`CLAUDE.md` is templated — the "Personal Environment" section adapts:
+`CLAUDE.md` is templated — the "Personal Environment" section adapts based on `platform` + `context`:
 
-| Environment | Section content |
+| Platform + Context | Section content |
 |---|---|
-| `wsl-work`, `wsl-gaming` | WSL2 specifics (Windows Chrome, no `op`, GitLab primary) |
-| `distrobox-personal` | Distrobox specifics (no `op`, GitLab primary) |
-| `distrobox-work` | Work specifics (GitHub for work, GitLab for personal) |
+| `wsl` (any context) | WSL2 specifics (Windows Chrome, no `op`, GitLab primary) |
+| `distrobox` + `personal` | Distrobox specifics (no `op`, GitLab primary) |
+| `distrobox` + `work-*` | Work specifics (GitHub for work, GitLab for personal) |
 | `aurora` | Aurora DX specifics (ostree, 1Password SSH, no `op`, GitLab primary) |
-| `distrobox-sandbox` | Skipped entirely (excluded in `.chezmoiignore`) |
+| any + `sandbox` | Skipped entirely (excluded in `.chezmoiignore`) |
 
 ### Runtime files
 
