@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.3.0] - 2026-03-05
+
+### Added
+
+- Node.js LTS install and Context7 MCP setup instructions in bootstrap
+- Distrobox automation, Antigravity aliases, and credential seeding (`setup-creds`)
+- SSH agent fix, IDE forwarding, and credential seeding for distrobox containers
+- Claude Code project plugin settings (`.claude/settings.json`)
+- Claude Code plugin dependencies design and implementation plan docs
+
+### Fixed
+
+- SSH socket path, conditional prompts, glab install, and distrobox script issues
+
+### Changed
+
+- Replace flat `environment` variable with `platform` + `context` two-variable model
+- Add prompt hints and auto-set distrobox environment in chezmoi config
+
 ## [v1.2.0] - 2026-03-03
 
 ### Added
