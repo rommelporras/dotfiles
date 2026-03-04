@@ -76,6 +76,13 @@ if ! command -v atuin &>/dev/null; then
 fi
 {{ end -}}
 
+# Node.js LTS (Aurora — needed for Claude Code MCP plugins like playwright)
+if [ "$IS_AURORA" = true ] && ! command -v node &>/dev/null; then
+    echo "Installing node@24 (LTS) via brew..."
+    brew install node@24
+    brew link --force --overwrite node@24
+fi
+
 # FZF (Aurora has system FZF via RPM — skip git install)
 if [ "$IS_AURORA" = false ] && [ ! -d "$HOME/.fzf" ]; then
     echo "Installing fzf..."
@@ -194,9 +201,13 @@ if [ "$IS_DISTROBOX" = true ]; then
     echo "  Run 'setup-creds' to seed credentials from 1Password (requires host unlock)"
     echo ""
 fi
-echo "Claude Code plugin setup (run once inside Claude Code):"
+echo "Claude Code setup (run once inside Claude Code):"
 echo "  /plugin marketplace add obra/superpowers-marketplace"
 echo "  /plugin install superpowers@superpowers-marketplace"
+{{ if ne .context "sandbox" -}}
+echo "  claude mcp add --scope user --transport http context7 https://mcp.context7.com/mcp \\"
+echo "    --header \"CONTEXT7_API_KEY: \$(op read 'op://Kubernetes/Context7/api-key' --no-newline)\""
+{{ end -}}
 echo ""
 echo ""
 echo "Restart your shell or run: exec zsh"
