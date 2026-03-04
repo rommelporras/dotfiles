@@ -195,14 +195,26 @@ echo -e "\uf418 git  \ue718 node  \ue73c python  \uf308 docker"
 
 You should see icons next to each label, not boxes or blanks.
 
-### 2. Set up credentials (manual, per machine)
+### 2. Set up credentials (per machine)
 
 The bootstrap creates `~/.ssh/` — you populate it with public keys only.
 Private keys stay in 1Password; the SSH agent serves them.
 
+**Distrobox containers** have an automated credential-seeding script that pulls
+secrets from 1Password on the Aurora host via `distrobox-host-exec op`:
+
+```bash
+setup-creds    # Run inside any non-sandbox container
+```
+
+This handles Atuin login, glab auth, and prints manual steps for kubeconfig/AWS.
+The script runs automatically during `distrobox-setup.sh` — you only need to
+run it manually if you skipped it or need to re-authenticate.
+
+**WSL and Aurora host** — set up credentials manually:
+
 ```bash
 # SSH public keys (needed for IdentityFile matching — private keys stay in 1Password)
-# Copy .pub files from another machine, or export from 1Password
 cp id_ed25519.pub ~/.ssh/
 cp proxmox.pub ~/.ssh/      # if applicable
 chmod 644 ~/.ssh/*.pub
@@ -235,16 +247,35 @@ atuin login -u <account-name> \
 ### 3. Aurora DX only: set up Distrobox containers
 
 ```bash
-~/personal/dotfiles/scripts/distrobox-setup.sh
+~/personal/dotfiles/scripts/distrobox-setup.sh            # All containers
+~/personal/dotfiles/scripts/distrobox-setup.sh personal   # Single container
 ```
 
-This creates containers (`work-eam`, `personal`, `sandbox`) with separate home
-directories and bootstraps chezmoi inside each one. The context is passed automatically.
+The script:
+1. Creates containers from `containers/distrobox.ini`
+2. Installs chezmoi inside each container
+3. Symlinks chezmoi's source to the host repo (uncommitted changes apply immediately)
+4. Pre-seeds `platform=distrobox` and `context=<name>` in the chezmoi config
+5. Runs `chezmoi init --apply` (prompts for email, credentials, Atuin — sandbox skips all prompts)
+6. Runs `setup-creds` to seed Atuin/glab credentials from 1Password (non-sandbox only)
+
+Container home directories persist at `~/.distrobox/<name>/` on the host — removing
+and recreating a container (`distrobox rm <name>`) preserves your data.
+
+**IDE forwarding:** `code` and `agy` (Antigravity) commands inside non-sandbox
+containers are forwarded to the Aurora host via `distrobox-host-exec`.
 
 Enter a container:
 
 ```bash
 distrobox enter work-eam  # or: personal, sandbox
+```
+
+**Updating dotfiles inside a container:**
+
+```bash
+~/bin/chezmoi apply -v    # Picks up changes from the host repo (symlinked)
+exec zsh                  # Reload shell
 ```
 
 ### 4. Aurora DX only: build AI sandbox
@@ -411,6 +442,8 @@ dotfiles/
 │   ├── dot_zshrc.tmpl         # Shell config
 │   ├── dot_gitconfig.tmpl     # Git config (conditional includes)
 │   ├── run_once_before_bootstrap.sh.tmpl  # First-run setup script
+│   ├── dot_local/bin/         # User scripts (~/.local/bin/)
+│   │   └── setup-creds       # Credential seeding for Distrobox (1Password via host)
 │   ├── private_dot_claude/    # Claude Code global config (~/.claude/)
 │   │   ├── CLAUDE.md.tmpl     # Global instructions (templated per env)
 │   │   ├── settings.json      # Permissions, hooks, plugins

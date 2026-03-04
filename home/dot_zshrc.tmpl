@@ -89,10 +89,12 @@ fi
 {{ if eq .platform "distrobox" -}}
 {{ if ne .context "sandbox" -}}
 # ─── IDE forwarding (host apps via distrobox-host-exec) ─────────────
-# VS Code runs on the Aurora host; this wrapper forwards the command
-# so 'code .' works transparently from inside containers.
+# VS Code and Antigravity run on the Aurora host; these wrappers
+# forward commands so 'code .', 'agy', and 'antigravity' work transparently.
 if command -v distrobox-host-exec &>/dev/null; then
     alias code='distrobox-host-exec code'
+    alias antigravity='distrobox-host-exec antigravity'
+    alias agy='distrobox-host-exec antigravity'
 fi
 {{ end -}}
 {{ end -}}
@@ -110,6 +112,9 @@ alias gd="git diff"
 alias gcmsg="git commit -m"
 alias gitc="git checkout"
 alias gitm="git checkout master"
+{{ if eq .platform "aurora" -}}
+alias agy='antigravity'
+{{ end -}}
 alias zshconfig="${EDITOR:-code} ~/.zshrc"
 alias pip=pip3
 

@@ -23,12 +23,19 @@ echo ""
 
 {{ if ne .atuin_account "none" -}}
 # ─── Atuin ────────────────────────────────────────────────────────────
+# Atuin installs to ~/.atuin/bin/ which isn't in PATH outside of zsh
+[ -f "$HOME/.atuin/bin/env" ] && . "$HOME/.atuin/bin/env"
 if command -v atuin &>/dev/null; then
     echo "--- Atuin ({{ .atuin_account }}) ---"
-    ATUIN_PASS=$($OP read "op://Kubernetes/Atuin/{{ if eq .atuin_account "rommel-work" }}work{{ else }}personal{{ end }}-password")
-    ATUIN_KEY=$($OP read "op://Kubernetes/Atuin/encryption-key")
-    atuin login -u "{{ .atuin_account }}" -p "$ATUIN_PASS" --key "$ATUIN_KEY"
-    atuin sync
+    if atuin status 2>/dev/null | grep -q "{{ .atuin_account }}"; then
+        echo "Atuin: already logged in, syncing..."
+        atuin sync
+    else
+        ATUIN_PASS=$($OP read "op://Kubernetes/Atuin/{{ if eq .atuin_account "rommel-work" }}work{{ else }}personal{{ end }}-password")
+        ATUIN_KEY=$($OP read "op://Kubernetes/Atuin/encryption-key")
+        atuin login -u "{{ .atuin_account }}" -p "$ATUIN_PASS" --key "$ATUIN_KEY"
+        atuin sync
+    fi
     echo "Atuin: done"
 else
     echo "Atuin: not installed, skipping"

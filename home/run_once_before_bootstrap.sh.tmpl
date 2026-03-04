@@ -72,7 +72,7 @@ fi
 {{ if ne .atuin_account "none" -}}
 if ! command -v atuin &>/dev/null; then
     echo "Installing atuin..."
-    curl -sSf https://setup.atuin.sh | bash
+    curl -sSf https://setup.atuin.sh | bash -s -- --non-interactive
 fi
 {{ end -}}
 
@@ -179,11 +179,24 @@ if [ "$IS_AURORA" = true ]; then
     echo "  - DO NOT use chsh — atomic systems don't have it"
     echo "  - 1Password: rpm-ostree install 1password 1password-cli && reboot"
     echo "  - Enable SSH Agent in 1Password → Settings → Developer"
+    echo "  - Antigravity IDE:"
+    echo "      sudo tee /etc/yum.repos.d/antigravity.repo <<'REPO'"
+    echo "      [antigravity]"
+    echo "      name=Antigravity RPM Repository"
+    echo "      baseurl=https://us-central1-yum.pkg.dev/projects/antigravity-auto-updater-dev/antigravity-rpm"
+    echo "      enabled=1"
+    echo "      gpgcheck=0"
+    echo "      REPO"
+    echo "      rpm-ostree install antigravity && reboot"
 fi
 if [ "$IS_DISTROBOX" = true ]; then
     echo "Distrobox credential seeding:"
     echo "  Run 'setup-creds' to seed credentials from 1Password (requires host unlock)"
     echo ""
 fi
+echo "Claude Code plugin setup (run once inside Claude Code):"
+echo "  /plugin marketplace add obra/superpowers-marketplace"
+echo "  /plugin install superpowers@superpowers-marketplace"
+echo ""
 echo ""
 echo "Restart your shell or run: exec zsh"

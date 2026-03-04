@@ -19,9 +19,12 @@ dotfiles/
 │   ├── dot_zshrc.tmpl                   # Shell config (templated per env)
 │   ├── dot_gitconfig.tmpl               # Git config (conditional includes)
 │   ├── run_once_before_bootstrap.sh.tmpl # First-run setup (installs tools)
+│   ├── dot_local/bin/                   # User scripts (~/.local/bin/)
+│   │   └── executable_setup-creds.tmpl  # Credential seeding for distrobox
 │   ├── private_dot_claude/              # Claude Code global config (~/.claude/)
 │   └── dot_config/                      # ~/.config/ files
 ├── scripts/                             # Setup automation
+│   └── distrobox-setup.sh               # Container creation + chezmoi bootstrap
 ├── containers/                          # Distrobox + Podman definitions
 ├── bin/                                 # CLI tools (ai-sandbox)
 └── hooks/                               # Git hooks (gitleaks)
@@ -47,13 +50,38 @@ Templates use two variables:
 | wsl | work-eam | 1Password via npiperelay | NVM/Bun, work + personal creds |
 | wsl | gaming | 1Password via npiperelay | NVM/Bun, personal creds |
 | aurora | personal | 1Password native socket | Immutable OS, bling.sh, no chsh, Atuin sync |
-| distrobox | work-eam | Inherited from host | Work AWS/EKS creds, Terraform |
-| distrobox | personal | Inherited from host | Homelab kubeconfig, glab, Ansible |
+| distrobox | work-eam | 1Password via absolute host path | Work AWS/EKS creds, Terraform |
+| distrobox | personal | 1Password via absolute host path | Homelab kubeconfig, glab, Ansible |
 | distrobox | sandbox | Fallback ssh-agent | No creds, no Claude config |
 
 Adding a new work context (e.g., `work-acme`): add container to `distrobox.ini`, add
 job-specific aliases in `dot_zshrc.tmpl`, run `distrobox-setup.sh work-acme`. Shared
 work tools (Terraform, work email) apply automatically via `hasPrefix .context "work-"`.
+
+### Distrobox chezmoi workflow
+
+`scripts/distrobox-setup.sh` bootstraps containers with chezmoi:
+1. Installs chezmoi inside the container (`~/bin/chezmoi`)
+2. Symlinks `~/.local/share/chezmoi` → host repo (uncommitted changes apply immediately)
+3. Pre-seeds `platform=distrobox` + `context=<name>` in `~/.config/chezmoi/chezmoi.toml`
+4. Runs `chezmoi init --apply` (prompts for remaining values)
+5. Runs `setup-creds` to seed Atuin/glab from 1Password on the host (non-sandbox only)
+
+Inside containers, `$HOME` is `~/.distrobox/<context>/` (NOT the host home). Paths to
+host resources (e.g. 1Password socket) must use absolute paths like `/home/<user>/...`.
+
+To update dotfiles inside a container: `~/bin/chezmoi apply -v && exec zsh`
+
+### IDE forwarding
+
+Non-sandbox distrobox containers alias `code`, `antigravity`, and `agy` to forward
+to the Aurora host via `distrobox-host-exec`. No need to install IDEs in containers.
+
+### Credential seeding
+
+`setup-creds` (deployed to `~/.local/bin/`) uses `distrobox-host-exec op` to pull
+secrets from 1Password on the host. Handles Atuin login, glab auth, and prints
+manual steps for kubeconfig/AWS. Skipped in sandbox (excluded via `.chezmoiignore`).
 
 ## Common Commands
 
