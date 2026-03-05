@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
-# Credential seeding for Distrobox containers.
+# Credential and plugin seeding for Distrobox containers.
 # Calls 1Password on the Aurora host via distrobox-host-exec.
 # Run once after first container bootstrap.
 
@@ -17,6 +17,25 @@ fi
 
 OP="distrobox-host-exec op"
 
+# ─── Claude Code plugins (no 1Password dependency for install) ────────
+if command -v claude &>/dev/null; then
+    echo "=== Claude Code Plugins ==="
+
+    # Marketplaces
+    claude plugin marketplace add anthropics/claude-plugins-official 2>/dev/null || true
+    claude plugin marketplace add obra/superpowers-marketplace 2>/dev/null || true
+
+    # Plugins (user scope — available in all projects)
+    claude plugin install context7@claude-plugins-official --scope user 2>/dev/null || true
+    claude plugin install superpowers@superpowers-marketplace --scope user 2>/dev/null || true
+    claude plugin install episodic-memory@superpowers-marketplace --scope user 2>/dev/null || true
+
+    echo "Plugins installed"
+    echo ""
+else
+    echo "Claude Code not installed — skipping plugin setup"
+fi
+
 echo "=== Credential Setup ==="
 echo "This will prompt 1Password on the host for authentication."
 echo ""
@@ -31,10 +50,28 @@ if command -v atuin &>/dev/null; then
         echo "Atuin: already logged in, syncing..."
         atuin sync
     else
-        ATUIN_PASS=$($OP read "op://Kubernetes/Atuin/{{ if eq .atuin_account "rommel-work" }}work{{ else }}personal{{ end }}-password")
+        ATUIN_PASS=$($OP read "op://Kubernetes/Atuin/{{ .context }}-password")
         ATUIN_KEY=$($OP read "op://Kubernetes/Atuin/encryption-key")
-        atuin login -u "{{ .atuin_account }}" -p "$ATUIN_PASS" --key "$ATUIN_KEY"
-        atuin sync
+        # Back up local state — atuin login re-encrypts before server validates
+        ATUIN_DATA="$HOME/.local/share/atuin"
+        ATUIN_BACKUP=""
+        if [ -d "$ATUIN_DATA" ]; then
+            ATUIN_BACKUP=$(mktemp -d)
+            cp -a "$ATUIN_DATA" "$ATUIN_BACKUP/atuin"
+        fi
+        if atuin login -u "{{ .atuin_account }}" -p "$ATUIN_PASS" --key "$ATUIN_KEY"; then
+            atuin sync
+            [ -n "$ATUIN_BACKUP" ] && rm -rf "$ATUIN_BACKUP"
+        else
+            echo "ERROR: Atuin login failed — restoring local state"
+            if [ -n "$ATUIN_BACKUP" ]; then
+                rm -rf "$ATUIN_DATA"
+                mv "$ATUIN_BACKUP/atuin" "$ATUIN_DATA"
+                rm -rf "$ATUIN_BACKUP"
+            fi
+            echo "  Verify account '{{ .atuin_account }}' exists on the Atuin server"
+            echo "  and that 1Password field '{{ .context }}-password' is correct"
+        fi
     fi
     echo "Atuin: done"
 else
@@ -64,6 +101,19 @@ echo "  From host: cp ~/.kube/homelab.yaml ~/.distrobox/{{ .context }}/.kube/"
 echo "--- AWS ---"
 echo "Manual step: run 'aws sso login --profile <name>' after setup"
 {{ end -}}
+
+# ─── Context7 MCP (needs 1Password for API key) ──────────────────────
+if command -v claude &>/dev/null; then
+    CONTEXT7_KEY=$($OP read 'op://Kubernetes/Context7/api-key' --no-newline 2>/dev/null || true)
+    if [ -n "$CONTEXT7_KEY" ]; then
+        claude mcp add --scope user --transport http context7 \
+            https://mcp.context7.com/mcp \
+            --header "CONTEXT7_API_KEY: $CONTEXT7_KEY"
+        echo "Context7 MCP registered"
+    else
+        echo "WARNING: Could not read Context7 API key — re-run setup-creds when 1Password is available"
+    fi
+fi
 
 echo ""
 echo "=== Done ==="

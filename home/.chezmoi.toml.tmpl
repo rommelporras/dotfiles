@@ -36,7 +36,7 @@
 
 {{- if ne $context "sandbox" -}}
 {{-   $atuinSyncAddress = promptStringOnce . "atuin_sync_address" "Atuin sync server URL (e.g. https://atuin.k8s.rommelporras.com, blank to skip)" -}}
-{{-   $atuinAccount = promptStringOnce . "atuin_account" "Atuin account (rommel-personal/rommel-work/none)" -}}
+{{-   $atuinAccount = promptStringOnce . "atuin_account" "Atuin account (rommel-personal/work-eam/work-<name>/none)" -}}
 {{- end -}}
 
 [data]

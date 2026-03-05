@@ -18,18 +18,20 @@ RUN curl -fsSL https://deb.nodesource.com/setup_24.x | bash - \
     && apt-get install -y --no-install-recommends nodejs \
     && rm -rf /var/lib/apt/lists/*
 
-# Python + uv (for Python-based AI tools)
+# Python (for Python-based AI tools)
 RUN apt-get update && apt-get install -y --no-install-recommends python3 python3-pip \
     && rm -rf /var/lib/apt/lists/*
-ENV CARGO_HOME=/usr/local
-RUN curl -LsSf https://astral.sh/uv/install.sh | sh
 
-# Claude Code CLI
-RUN npm install -g @anthropic-ai/claude-code
-
-# Non-root user
+# Non-root user (create before user-scoped installs)
 RUN useradd -m -s /bin/zsh developer
 USER developer
+ENV PATH="/home/developer/.local/bin:$PATH"
+
+# uv (Python package manager — installs to ~/.local/bin as developer)
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Claude Code CLI (native installer — auto-updates, no npm dependency)
+RUN curl -fsSL https://claude.ai/install.sh | bash
 WORKDIR /workspace
 
 ENTRYPOINT ["/bin/zsh", "-c"]

@@ -21,14 +21,39 @@ fi
 
 echo "Runtime: WSL=$IS_WSL, Aurora=$IS_AURORA, Distrobox=$IS_DISTROBOX"
 
-# ─── Claude Code: replace old symlinks with chezmoi-managed files ────
+# ─── Claude Code: config repo symlinks ───────────────────────────────
 
-for f in CLAUDE.md settings.json hooks agents skills; do
-    if [ -L "$HOME/.claude/$f" ]; then
-        echo "Removing old symlink: ~/.claude/$f"
-        rm "$HOME/.claude/$f"
+{{ if ne .context "sandbox" -}}
+# On Aurora/WSL: clone if needed. On Distrobox: host repo is already accessible.
+if [ "$IS_DISTROBOX" = true ]; then
+    # Normalize /var/home → /home for container compatibility
+    HOST_HOME="/home/{{ .chezmoi.username }}"
+    CLAUDE_CONFIG_REPO="$HOST_HOME/personal/claude-config"
+else
+    CLAUDE_CONFIG_REPO="$HOME/personal/claude-config"
+    if [ ! -d "$CLAUDE_CONFIG_REPO" ]; then
+        echo "Cloning claude-config..."
+        mkdir -p "$HOME/personal"
+        git clone https://github.com/rommelporras/claude-config.git "$CLAUDE_CONFIG_REPO"
     fi
-done
+fi
+
+if [ -d "$CLAUDE_CONFIG_REPO" ]; then
+    mkdir -p "$HOME/.claude"
+    for item in CLAUDE.md settings.json hooks skills agents; do
+        if [ -e "$CLAUDE_CONFIG_REPO/$item" ]; then
+            # Remove existing file/dir before symlinking (ln -sf can't replace dirs)
+            if [ -e "$HOME/.claude/$item" ] && [ ! -L "$HOME/.claude/$item" ]; then
+                rm -r "$HOME/.claude/$item"
+            fi
+            ln -sf "$CLAUDE_CONFIG_REPO/$item" "$HOME/.claude/$item"
+        fi
+    done
+    echo "Linked ~/.claude/ → $CLAUDE_CONFIG_REPO"
+else
+    echo "WARNING: claude-config not found at $CLAUDE_CONFIG_REPO — skipping Claude config"
+fi
+{{ end -}}
 
 # ─── Core tools ──────────────────────────────────────────────────────
 
@@ -83,6 +108,14 @@ if [ "$IS_AURORA" = true ] && ! command -v node &>/dev/null; then
     brew link --force --overwrite node@24
 fi
 
+# Claude Code (WSL and Distrobox — Aurora has it via ujust bbrew)
+{{ if ne .context "sandbox" -}}
+if [ "$IS_AURORA" = false ] && ! command -v claude &>/dev/null; then
+    echo "Installing Claude Code..."
+    curl -fsSL https://claude.ai/install.sh | bash
+fi
+{{ end -}}
+
 # FZF (Aurora has system FZF via RPM — skip git install)
 if [ "$IS_AURORA" = false ] && [ ! -d "$HOME/.fzf" ]; then
     echo "Installing fzf..."
@@ -98,13 +131,15 @@ fi
 
 # ─── Environment-specific tools ──────────────────────────────────────
 
-{{ if eq .platform "wsl" -}}
-# NVM (WSL only)
+{{ if or (eq .platform "wsl") (eq .platform "distrobox") -}}
+# NVM (WSL and Distrobox — provides Node.js for Claude Code plugins)
 if [ ! -d "$HOME/.nvm" ]; then
     echo "Installing nvm..."
     curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash
 fi
+{{ end -}}
 
+{{ if eq .platform "wsl" -}}
 # Bun (WSL only)
 if ! command -v bun &>/dev/null; then
     echo "Installing bun..."
@@ -197,16 +232,26 @@ if [ "$IS_AURORA" = true ]; then
     echo "      rpm-ostree install antigravity && reboot"
 fi
 if [ "$IS_DISTROBOX" = true ]; then
-    echo "Distrobox credential seeding:"
-    echo "  Run 'setup-creds' to seed credentials from 1Password (requires host unlock)"
-    echo ""
-fi
-echo "Claude Code setup (run once inside Claude Code):"
-echo "  /plugin marketplace add obra/superpowers-marketplace"
-echo "  /plugin install superpowers@superpowers-marketplace"
 {{ if ne .context "sandbox" -}}
-echo "  claude mcp add --scope user --transport http context7 https://mcp.context7.com/mcp \\"
-echo "    --header \"CONTEXT7_API_KEY: \$(op read 'op://Kubernetes/Context7/api-key' --no-newline)\""
+    echo "Distrobox credential + plugin seeding:"
+    echo "  Run 'setup-creds' to seed credentials and install Claude Code plugins (requires host 1Password unlock)"
+    echo ""
+{{ else -}}
+    echo "Sandbox mode — no credentials or Claude Code plugins"
+    echo ""
+{{ end -}}
+fi
+{{ if ne .context "sandbox" -}}
+if [ "$IS_DISTROBOX" = false ]; then
+    echo "Claude Code plugins (run once):"
+    echo "  claude plugin marketplace add anthropics/claude-plugins-official"
+    echo "  claude plugin marketplace add obra/superpowers-marketplace"
+    echo "  claude plugin install context7@claude-plugins-official --scope user"
+    echo "  claude plugin install superpowers@superpowers-marketplace --scope user"
+    echo "  claude plugin install episodic-memory@superpowers-marketplace --scope user"
+    echo "  claude mcp add --scope user --transport http context7 https://mcp.context7.com/mcp \\"
+    echo "    --header \"CONTEXT7_API_KEY: \$(op read 'op://Kubernetes/Context7/api-key' --no-newline)\""
+fi
 {{ end -}}
 echo ""
 echo ""

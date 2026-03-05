@@ -5,13 +5,13 @@ Aurora DX, and Distrobox containers.
 
 ## What This Sets Up
 
-- **Zsh** with Oh My Zsh (31 plugins) and zsh-autosuggestions
+- **Zsh** with Oh My Zsh (32 plugins) and zsh-autosuggestions
 - **Starship** cross-shell prompt
 - **Atuin** shell history sync (optional, self-hosted)
 - **FZF** fuzzy finder
 - **Git** with conditional identity (personal vs work, auto-switches by directory)
 - **Conventional commit** helper (`git cc feat "message"`)
-- **Claude Code** global config (CLAUDE.md, settings, hooks, skills, agents)
+- **Claude Code** config via [claude-config](https://github.com/rommelporras/claude-config) repo (CLAUDE.md, settings, hooks, skills, agents)
 - **AI sandbox** — Podman container for running AI agents with tiered credential access
 
 ## Supported Environments
@@ -162,9 +162,9 @@ chezmoi will ask you:
 Platform (`wsl`, `aurora`, `distrobox`) is auto-detected — you'll never be prompted for it.
 Answers are saved locally to `~/.config/chezmoi/chezmoi.toml` and never committed.
 
-The bootstrap script automatically installs: zsh, Starship, and environment-specific
-tools (FZF, xclip, NVM, Bun, Terraform, glab, Ansible) based on your environment.
-On Aurora, most tools are pre-installed via brew/RPM and skipped.
+The bootstrap script automatically installs: zsh, Starship, Claude Code (native installer),
+and environment-specific tools (FZF, xclip, NVM, Bun, Terraform, glab, Ansible) based on
+your environment. On Aurora, most tools are pre-installed via brew/RPM and skipped.
 
 **After install, restart your shell:**
 
@@ -207,9 +207,10 @@ secrets from 1Password on the Aurora host via `distrobox-host-exec op`:
 setup-creds    # Run inside any non-sandbox container
 ```
 
-This handles Atuin login, glab auth, and prints manual steps for kubeconfig/AWS.
-The script runs automatically during `distrobox-setup.sh` — you only need to
-run it manually if you skipped it or need to re-authenticate.
+This handles Claude Code plugin/marketplace installation, Context7 MCP registration,
+Atuin login, glab auth, and prints manual steps for kubeconfig/AWS. The script runs
+automatically during `distrobox-setup.sh` — you only need to run it manually if you
+skipped it or need to re-authenticate.
 
 **WSL and Aurora host** — set up credentials manually:
 
@@ -224,6 +225,17 @@ ssh-add -l                   # Should list your 1Password SSH keys
 
 # GitHub CLI
 gh auth login
+
+# Claude Code plugins (run once)
+claude plugin marketplace add anthropics/claude-plugins-official
+claude plugin marketplace add obra/superpowers-marketplace
+claude plugin install context7@claude-plugins-official --scope user
+claude plugin install superpowers@superpowers-marketplace --scope user
+claude plugin install episodic-memory@superpowers-marketplace --scope user
+
+# Context7 MCP (needs API key from 1Password)
+claude mcp add --scope user --transport http context7 https://mcp.context7.com/mcp \
+  --header "CONTEXT7_API_KEY: $(op read 'op://Kubernetes/Context7/api-key' --no-newline)"
 
 # AWS (work environments only)
 aws sso login --profile <name>
@@ -240,7 +252,7 @@ glab auth login --hostname gitlab.k8s.rommelporras.com \
 
 # Atuin (if configured)
 atuin login -u <account-name> \
-  -p "$(op read 'op://Kubernetes/Atuin/personal-password')" \
+  -p "$(op read 'op://Kubernetes/Atuin/<context>-password')" \
   -k "$(op read 'op://Kubernetes/Atuin/encryption-key')"
 ```
 
@@ -257,7 +269,7 @@ The script:
 3. Symlinks chezmoi's source to the host repo (uncommitted changes apply immediately)
 4. Pre-seeds `platform=distrobox` and `context=<name>` in the chezmoi config
 5. Runs `chezmoi init --apply` (prompts for email, credentials, Atuin — sandbox skips all prompts)
-6. Runs `setup-creds` to seed Atuin/glab credentials from 1Password (non-sandbox only)
+6. Runs `setup-creds` to seed plugins, MCP, and credentials from 1Password (non-sandbox only)
 
 Container home directories persist at `~/.distrobox/<name>/` on the host — removing
 and recreating a container (`distrobox rm <name>`) preserves your data.
@@ -437,19 +449,13 @@ dotfiles/
 ├── .chezmoiroot               # Points chezmoi source to home/
 ├── home/                      # chezmoi source dir (maps to ~/)
 │   ├── .chezmoi.toml.tmpl     # Interactive prompts (chezmoi init)
-│   ├── .chezmoiexternal.toml  # External deps (oh-my-zsh, plugins)
+│   ├── .chezmoiexternal.toml  # External deps (oh-my-zsh, zsh-autosuggestions)
 │   ├── .chezmoiignore         # Per-environment file skipping
 │   ├── dot_zshrc.tmpl         # Shell config
 │   ├── dot_gitconfig.tmpl     # Git config (conditional includes)
 │   ├── run_once_before_bootstrap.sh.tmpl  # First-run setup script
 │   ├── dot_local/bin/         # User scripts (~/.local/bin/)
-│   │   └── setup-creds       # Credential seeding for Distrobox (1Password via host)
-│   ├── private_dot_claude/    # Claude Code global config (~/.claude/)
-│   │   ├── CLAUDE.md.tmpl     # Global instructions (templated per env)
-│   │   ├── settings.json      # Permissions, hooks, plugins
-│   │   ├── hooks/             # Security hooks (secret scan, write protection)
-│   │   ├── agents/            # Custom agents (code-reviewer)
-│   │   └── skills/            # Skills (/commit, /push, /explain-code)
+│   │   └── setup-creds       # Credential + plugin seeding for Distrobox
 │   └── dot_config/            # ~/.config/ files
 │       ├── starship.toml
 │       ├── atuin/config.toml.tmpl
@@ -458,7 +464,7 @@ dotfiles/
 │       └── git/               # Git identity includes + global gitignore
 ├── bin/                       # CLI tools (ai-sandbox)
 ├── containers/                # Containerfile.ai-sandbox + distrobox.ini
-├── scripts/                   # Setup automation (distrobox-setup.sh)
+├── scripts/                   # Setup automation (distrobox-setup.sh, windows-git-setup.ps1)
 └── hooks/                     # Git hooks (gitleaks pre-commit)
 ```
 
@@ -476,37 +482,32 @@ If gitleaks is not installed, the hook prints a warning and allows the commit.
 
 ## Claude Code Config
 
-Claude Code's global configuration (`~/.claude/`) is managed by chezmoi. This
-replaces the old `claude-config` repo that used symlinks.
+Claude Code's global configuration (`~/.claude/`) is managed by a separate
+[claude-config](https://github.com/rommelporras/claude-config) repo — cloned to
+`~/personal/claude-config` and symlinked into `~/.claude/` by the bootstrap script.
 
-### What's included
+On distrobox containers, symlinks point to the host's clone via absolute paths
+(`/home/<user>/personal/claude-config/`). The `.claude/` directory is blanket-ignored
+in `.chezmoiignore` so chezmoi never touches it.
+
+### What's in claude-config
 
 | File | Purpose |
 |---|---|
-| `CLAUDE.md` | Global instructions (templated per environment) |
-| `settings.json` | Permission deny rules, hooks, enabled plugins |
+| `CLAUDE.md` | Universal global instructions (same across all environments) |
+| `settings.json` | Permission deny rules, hooks, enabled plugins, marketplace declarations |
 | `hooks/` | Security hooks: secret scanning, write protection, destructive command blocking |
-| `agents/code-reviewer.md` | Code review agent with per-project memory |
-| `skills/commit/` | `/commit` — conventional commit workflow |
-| `skills/push/` | `/push` — push to all configured remotes |
-| `skills/explain-code/` | `/explain-code` — structured code explanations |
+| `agents/` | Custom agents (code-reviewer) |
+| `skills/` | Skills (/commit, /push, /explain-code) |
 
-### Environment differences
+### Plugin and MCP setup
 
-`CLAUDE.md` is templated — the "Personal Environment" section adapts based on `platform` + `context`:
+Plugins and MCP servers require CLI commands (not just config files):
 
-| Platform + Context | Section content |
-|---|---|
-| `wsl` (any context) | WSL2 specifics (Windows Chrome, no `op`, GitLab primary) |
-| `distrobox` + `personal` | Distrobox specifics (no `op`, GitLab primary) |
-| `distrobox` + `work-*` | Work specifics (GitHub for work, GitLab for personal) |
-| `aurora` | Aurora DX specifics (ostree, 1Password SSH, no `op`, GitLab primary) |
-| any + `sandbox` | Skipped entirely (excluded in `.chezmoiignore`) |
-
-### Runtime files
-
-Claude Code generates many runtime files (`history.jsonl`, `projects/`, `cache/`,
-etc.). These are excluded in `.chezmoiignore` so chezmoi doesn't touch them.
+- **Distrobox:** `setup-creds` handles marketplace registration, plugin installation, and
+  Context7 MCP setup automatically via `distrobox-host-exec op` for the API key.
+- **Aurora/WSL:** Run the `claude plugin` and `claude mcp` commands manually after bootstrap
+  (see [credential setup](#2-set-up-credentials-per-machine) for the exact commands).
 
 ## History Migration
 

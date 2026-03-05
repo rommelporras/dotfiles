@@ -80,10 +80,9 @@ export SSH_AUTH_SOCK="$HOME/.1password/agent.sock"
 # 1Password SSH Agent (host socket — $HOME differs inside distrobox, use absolute path)
 export SSH_AUTH_SOCK="/home/{{ .chezmoi.username }}/.1password/agent.sock"
 {{ else -}}
-# SSH agent fallback (sandbox — no 1Password access)
-if [ -z "$SSH_AUTH_SOCK" ]; then
-    eval "$(ssh-agent -s)" > /dev/null
-fi
+# SSH agent fallback (sandbox — no 1Password access, override host passthrough)
+unset SSH_AUTH_SOCK
+eval "$(ssh-agent -s)" > /dev/null
 {{ end -}}
 
 {{ if eq .platform "distrobox" -}}
