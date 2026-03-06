@@ -37,6 +37,11 @@ id_*
 # Downloaded binaries (chezmoi installer drops binary here)
 /bin/
 
+# Python
+.venv/
+__pycache__/
+*.pyc
+
 # OS and editor
 .DS_Store
 Thumbs.db
