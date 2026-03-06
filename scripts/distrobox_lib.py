@@ -5,6 +5,7 @@ from __future__ import annotations
 import configparser
 import os
 import re
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -71,14 +72,7 @@ def check_distrobox_available() -> None:
 
 def _command_exists(cmd: str) -> bool:
     """Check if a command exists on PATH."""
-    return subprocess.run(
-        ["command", "-v", cmd],
-        shell=True,
-        capture_output=True,
-    ).returncode == 0 or subprocess.run(
-        ["which", cmd],
-        capture_output=True,
-    ).returncode == 0
+    return shutil.which(cmd) is not None
 
 
 def run_in_container(name: str, cmd: str) -> subprocess.CompletedProcess[str]:
@@ -139,19 +133,26 @@ def partial_config(context: str) -> str:
 """
 
 
+ATUIN_SYNC_ADDRESS = "https://atuin.k8s.rommelporras.com"
+
+
 def full_config_for(context: str) -> str:
     """Generate a full chezmoi TOML config (non-interactive — all values pre-filled)."""
     atuin_account = "none"
+    atuin_sync_address = ""
     has_homelab_creds = "false"
     has_work_creds = "false"
 
     if context == "personal":
-        atuin_account = "rommel-personal"
+        atuin_account = "personal"
+        atuin_sync_address = ATUIN_SYNC_ADDRESS
         has_homelab_creds = "true"
     elif context.startswith("personal-"):
-        atuin_account = "rommel-personal"
+        atuin_account = "personal"
+        atuin_sync_address = ATUIN_SYNC_ADDRESS
     elif context.startswith("work-"):
-        atuin_account = "rommel-eam"
+        atuin_account = context  # work-eam, work-<name>, etc.
+        atuin_sync_address = ATUIN_SYNC_ADDRESS
         has_work_creds = "true"
 
     # has_op_cli is derived: true for personal-<project> on distrobox
@@ -166,17 +167,18 @@ def full_config_for(context: str) -> str:
   has_work_creds = {has_work_creds}
   has_homelab_creds = {has_homelab_creds}
   has_op_cli = {has_op_cli}
-  atuin_sync_address = ""
+  atuin_sync_address = "{atuin_sync_address}"
   atuin_account = "{atuin_account}"
 """
 
 
 def bootstrap_chezmoi(
     name: str,
-    repo: Path,
+    repo: str | Path,
     config: str,
     *,
     clear_state: bool = False,
+    timeout: int = 900,
 ) -> int:
     """Install chezmoi, link source to host repo, configure, and apply inside a container."""
     clear_cmd = ""
@@ -208,9 +210,16 @@ cat > "$HOME/.config/chezmoi/chezmoi.toml" <<'TOML'
 # Apply
 "$HOME/bin/chezmoi" init --apply
 """
-    result = subprocess.run(
-        ["distrobox", "enter", name, "--", "sh", "-c", script],
-    )
+    try:
+        result = subprocess.run(
+            ["distrobox", "enter", name, "--", "sh", "-c", script],
+            timeout=timeout,
+        )
+    except subprocess.TimeoutExpired:
+        console.print(
+            f"[red]Error:[/] chezmoi bootstrap timed out after {timeout}s"
+        )
+        return 1
     if result.returncode != 0:
         console.print(
             f"[yellow]Warning:[/] chezmoi bootstrap exited with code {result.returncode}"
@@ -218,17 +227,21 @@ cat > "$HOME/.config/chezmoi/chezmoi.toml" <<'TOML'
     return result.returncode
 
 
-def run_setup_creds(container: str) -> None:
-    """Run setup-creds inside a container."""
+def run_setup_creds(container: str) -> int:
+    """Run setup-creds inside a container. Returns exit code."""
     console.print(
         f"Seeding credentials for [bold]{container}[/] "
         "(requires 1Password unlock on host)..."
     )
-    subprocess.run(
+    result = subprocess.run(
         ["distrobox", "enter", container, "--", "sh", "-c",
          '"$HOME/.local/bin/setup-creds"'],
-        check=True,
     )
+    if result.returncode != 0:
+        console.print(
+            f"[yellow]Warning:[/] setup-creds exited with code {result.returncode}"
+        )
+    return result.returncode
 
 
 VALID_CONTAINER_RE = re.compile(r"^(work-\w+|personal(-\w+)?|gaming|sandbox)$")

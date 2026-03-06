@@ -74,7 +74,7 @@ if command -v atuin &>/dev/null; then
                 rm -rf "$ATUIN_BACKUP"
             fi
             echo "  Verify account '{{ .atuin_account }}' exists on the Atuin server"
-            echo "  and that 1Password field '{{ .context }}-password' is correct"
+            echo "  and that 1Password field '{{ if hasPrefix "personal-" .context }}personal{{ else }}{{ .context }}{{ end }}-password' is correct"
         fi
     fi
     echo "Atuin: done"
@@ -122,10 +122,13 @@ echo "Manual step: run 'aws sso login --profile <name>' after setup"
 if command -v claude &>/dev/null; then
     CONTEXT7_KEY=$($OP read 'op://Kubernetes/Context7/api-key' --no-newline 2>/dev/null || true)
     if [ -n "$CONTEXT7_KEY" ]; then
-        claude mcp add --scope user --transport http context7 \
+        if claude mcp add --scope user --transport http context7 \
             https://mcp.context7.com/mcp \
-            --header "CONTEXT7_API_KEY: $CONTEXT7_KEY"
-        echo "Context7 MCP registered"
+            --header "CONTEXT7_API_KEY: $CONTEXT7_KEY" 2>/dev/null; then
+            echo "Context7 MCP registered"
+        else
+            echo "Context7 MCP already configured (skipped)"
+        fi
     else
         echo "WARNING: Could not read Context7 API key — re-run setup-creds when 1Password is available"
     fi

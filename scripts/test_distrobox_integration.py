@@ -10,6 +10,7 @@ import argparse
 import signal
 import sys
 from dataclasses import dataclass, field
+from pathlib import Path
 
 from distrobox_lib import (
     bootstrap_chezmoi,
@@ -105,6 +106,8 @@ class ContainerTest:
         self.assert_executable("setup-creds is executable", "$HOME/.local/bin/setup-creds")
         self.assert_exec("glab installed", "command -v glab")
         self.assert_file("atuin installed", "$HOME/.atuin/bin/atuin")
+        self.assert_file("atuin config exists", "$HOME/.config/atuin/config.toml")
+        self.assert_contains("atuin sync_address set", "$HOME/.config/atuin/config.toml", "atuin.k8s.rommelporras.com")
         self.assert_contains("SSH_AUTH_SOCK = 1Password", "$HOME/.zshrc", "1password/agent.sock")
         self.assert_contains("invoicetron alias", "$HOME/.zshrc", "invoicetron")
         self.assert_contains("kubectl-homelab alias", "$HOME/.zshrc", "kubectl-homelab")
@@ -117,6 +120,8 @@ class ContainerTest:
         self.assert_executable("setup-creds is executable", "$HOME/.local/bin/setup-creds")
         self.assert_exec("glab installed", "command -v glab")
         self.assert_file("atuin installed", "$HOME/.atuin/bin/atuin")
+        self.assert_file("atuin config exists", "$HOME/.config/atuin/config.toml")
+        self.assert_contains("atuin sync_address set", "$HOME/.config/atuin/config.toml", "atuin.k8s.rommelporras.com")
         self.assert_not_contains("no 1Password SSH socket", "$HOME/.zshrc", "1password/agent.sock")
         self.assert_no_dir(".kube/ does not exist", "$HOME/.kube")
         self.assert_exec("op CLI installed", "command -v op")
@@ -130,6 +135,9 @@ class ContainerTest:
     def verify_work_eam(self) -> None:
         console.print("  --- work-eam-specific assertions ---")
         self.assert_executable("setup-creds is executable", "$HOME/.local/bin/setup-creds")
+        self.assert_file("atuin installed", "$HOME/.atuin/bin/atuin")
+        self.assert_file("atuin config exists", "$HOME/.config/atuin/config.toml")
+        self.assert_contains("atuin sync_address set", "$HOME/.config/atuin/config.toml", "atuin.k8s.rommelporras.com")
         self.assert_contains("SSH_AUTH_SOCK = 1Password", "$HOME/.zshrc", "1password/agent.sock")
         self.assert_contains("terraform alias tfi", "$HOME/.zshrc", "tfi")
         self.assert_contains("EAM alias", "$HOME/.zshrc", "eam-sre")
@@ -139,6 +147,8 @@ class ContainerTest:
     def verify_sandbox(self) -> None:
         console.print("  --- sandbox-specific assertions ---")
         self.assert_no_file("no setup-creds", "$HOME/.local/bin/setup-creds")
+        self.assert_exec("no atuin binary", "! command -v atuin && test ! -f $HOME/.atuin/bin/atuin")
+        self.assert_not_contains("no atuin sync_address", "$HOME/.config/atuin/config.toml", "sync_address")
         self.assert_contains("SSH_AUTH_SOCK unset", "$HOME/.zshrc", "unset SSH_AUTH_SOCK")
         self.assert_not_contains("no 1Password socket", "$HOME/.zshrc", "1password/agent.sock")
         self.assert_not_contains("no OTEL env vars", "$HOME/.zshrc", "OTEL_METRICS_EXPORTER")
@@ -149,7 +159,7 @@ def test_container(
     container: str,
     state: TestState,
     ini_config: dict[str, dict[str, str]],
-    repo: str,
+    repo: str | Path,
     *,
     keep: bool = False,
 ) -> None:
@@ -287,13 +297,14 @@ def main(argv: list[str] | None = None) -> None:
     state = TestState()
     ini_config = parse_distrobox_ini(ini_path)
     repo = repo_dir()
+    tested: list[str] = []  # track containers we've touched for cleanup
 
     # Signal handler for cleanup
     def cleanup(signum: int, frame: object) -> None:
-        if not args.keep:
+        if not args.keep and tested:
             console.print()
             console.print("[yellow]Interrupted — cleaning up containers...[/]")
-            for c in containers:
+            for c in tested:
                 container_stop(c)
                 container_rm(c)
         sys.exit(1)
@@ -306,7 +317,8 @@ def main(argv: list[str] | None = None) -> None:
     console.print(f"Keep after test: {args.keep}")
 
     for container in containers:
-        test_container(container, state, ini_config, str(repo), keep=args.keep)
+        tested.append(container)
+        test_container(container, state, ini_config, repo, keep=args.keep)
 
     # Summary
     console.print()

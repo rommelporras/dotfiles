@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 
 from distrobox_lib import (
@@ -12,7 +13,9 @@ from distrobox_lib import (
     check_not_wsl,
     console,
     container_assemble,
+    container_create,
     distrobox_ini_path,
+    parse_distrobox_ini,
     partial_config,
     repo_dir,
     run_setup_creds,
@@ -60,9 +63,28 @@ def main(argv: list[str] | None = None) -> None:
 
     console.print("[bold]=== Distrobox Container Setup ===[/]")
 
-    # Create containers from ini file
     ini = distrobox_ini_path()
-    container_assemble(ini)
+
+    if args.container is None:
+        # No arg: create all containers from ini, then bootstrap defaults
+        container_assemble(ini)
+    else:
+        # Specific container: create only that one
+        ini_config = parse_distrobox_ini(ini)
+        if args.container not in ini_config:
+            console.print(
+                f"[red]Error:[/] '{args.container}' not found in {ini}. "
+                "Add it to containers/distrobox.ini first."
+            )
+            sys.exit(1)
+        cfg = ini_config[args.container]
+        home = os.path.expanduser(cfg.get("home", ""))
+        container_create(
+            args.container,
+            cfg.get("image", ""),
+            home,
+            cfg.get("additional_packages", "").strip('"'),
+        )
 
     repo = repo_dir()
 
