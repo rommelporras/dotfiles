@@ -5,6 +5,37 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.4.0] - 2026-03-06
+
+### Added
+
+- `personal-<project>` distrobox pattern for project-scoped containers (e.g. `personal-fintrack`)
+- Native 1Password CLI (`op`) with biometric unlock for personal-<project> containers
+- Bun and Playwright (chromium) auto-install for personal-<project> containers
+- glab CLI and GitLab auth for personal-<project> containers
+- `has_op_cli` derived template variable in chezmoi config
+- OTel telemetry and personal aliases shared across personal and personal-<project> contexts
+- E2E integration test script (`scripts/test-distrobox-integration.sh`) with 64 assertions across 4 container types
+- Testing section in README with usage examples
+
+### Fixed
+
+- Missing `mkdir -p ~/.local/share` in `distrobox-setup.sh` that broke symlink creation on fresh containers
+- glab-cli `.chezmoiignore` condition now allows glab config for personal-<project> contexts
+- `.kube/` directory correctly excluded for personal-<project> (no homelab access)
+
+### Changed
+
+- Migrate Claude Code config from chezmoi (`private_dot_claude/`) to separate [claude-config](https://github.com/rommelporras/claude-config) repo with symlinks
+- Bootstrap clones claude-config repo and symlinks CLAUDE.md, settings.json, hooks, skills, agents into `~/.claude/`
+- `setup-creds` installs plugins and Context7 MCP before credentials (1Password failures don't block plugin setup)
+- Atuin login has backup/restore error handling to prevent state corruption on server failure
+- Sandbox SSH_AUTH_SOCK forcefully unset (overrides distrobox host passthrough)
+- Homelab aliases (invoicetron, kubectl-homelab) restricted to personal/gaming contexts only
+- AI sandbox Containerfile installs uv and Claude Code as developer user
+- Split glab and Ansible install conditions (glab shared, Ansible personal-only)
+- Updated CLAUDE.md and README.md with personal-<project> documentation
+
 ## [v1.3.0] - 2026-03-05
 
 ### Added
