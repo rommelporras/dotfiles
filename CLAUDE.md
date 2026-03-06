@@ -24,9 +24,10 @@ dotfiles/
 │   └── dot_config/                      # ~/.config/ files
 ├── scripts/                             # Setup automation
 │   ├── distrobox-setup.sh               # Container creation + chezmoi bootstrap
+│   ├── test-distrobox-integration.sh    # E2E test: delete → create → bootstrap → verify → delete
 │   └── windows-git-setup.ps1            # Windows git setup for WSL
 ├── containers/                          # Distrobox + Podman definitions
-│   ├── distrobox.ini                    # Container definitions (work-eam, personal, sandbox)
+│   ├── distrobox.ini                    # Container definitions (work-eam, personal, personal-fintrack, sandbox)
 │   └── Containerfile.ai-sandbox         # AI sandbox container (Ubuntu 24.04, Claude Code, Node.js, Python, uv)
 ├── bin/                                 # CLI tools (ai-sandbox)
 └── hooks/                               # Git hooks (gitleaks)
@@ -45,7 +46,7 @@ dotfiles/
 Templates use two variables:
 
 - **`platform`** (auto-detected): `wsl`, `aurora`, `distrobox` — controls SSH agent, package manager, system paths
-- **`context`** (user-selected): `personal`, `work-eam`, `work-<name>`, `gaming`, `sandbox` — controls aliases, credentials, tools
+- **`context`** (user-selected): `personal`, `personal-<project>`, `work-eam`, `work-<name>`, `gaming`, `sandbox` — controls aliases, credentials, tools
 
 | Platform | Context | SSH Agent | Key differences |
 |---|---|---|---|
@@ -54,11 +55,14 @@ Templates use two variables:
 | aurora | personal | 1Password native socket | Immutable OS, no chsh, Atuin sync |
 | distrobox | work-eam | 1Password via absolute host path | Work AWS/EKS creds, Terraform |
 | distrobox | personal | 1Password via absolute host path | Homelab kubeconfig, glab, Ansible |
+| distrobox | personal-\<project\> | No 1Password SSH (manual keys) | Native op CLI, Bun, Playwright, glab, no homelab |
 | distrobox | sandbox | Fallback ssh-agent | No creds, no Claude config |
 
-Adding a new work context (e.g., `work-acme`): add container to `distrobox.ini`, add
-job-specific aliases in `dot_zshrc.tmpl`, run `distrobox-setup.sh work-acme`. Shared
-work tools (Terraform, work email) apply automatically via `hasPrefix .context "work-"`.
+**Adding contexts:** For work: add container to `distrobox.ini`, add job-specific aliases
+in `dot_zshrc.tmpl`, run `distrobox-setup.sh work-acme`. Shared work tools apply via
+`hasPrefix .context "work-"`. For personal projects: add container to `distrobox.ini`,
+run `distrobox-setup.sh personal-<project>`. Shared personal tools (glab, Bun, Playwright,
+native `op` CLI) apply via `hasPrefix .context "personal-"`.
 
 ### Distrobox chezmoi workflow
 

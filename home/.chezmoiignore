@@ -6,8 +6,8 @@ docs/
 # OMZ generates these at runtime
 .oh-my-zsh/cache/
 
-# Skip glab config if no homelab credentials
-{{- if not .has_homelab_creds }}
+# Skip glab config if no homelab credentials and not personal-<project>
+{{- if and (not .has_homelab_creds) (not (hasPrefix "personal-" .context)) }}
 .config/glab-cli/
 {{- end }}
 
@@ -18,6 +18,11 @@ docs/
 
 # Claude Code config is managed by claude-config repo (symlinks), not chezmoi
 .claude/
+
+# personal-<project>: no kubeconfig (no homelab access)
+{{- if hasPrefix "personal-" .context }}
+.kube/
+{{- end }}
 
 # Sandbox: no credential seeding
 {{- if eq .context "sandbox" }}

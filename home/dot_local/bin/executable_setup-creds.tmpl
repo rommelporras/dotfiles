@@ -15,7 +15,11 @@ if ! command -v distrobox-host-exec &>/dev/null; then
     exit 1
 fi
 
+{{ if hasPrefix "personal-" .context -}}
+OP="op"
+{{ else -}}
 OP="distrobox-host-exec op"
+{{ end -}}
 
 # ─── Claude Code plugins (no 1Password dependency for install) ────────
 if command -v claude &>/dev/null; then
@@ -50,7 +54,7 @@ if command -v atuin &>/dev/null; then
         echo "Atuin: already logged in, syncing..."
         atuin sync
     else
-        ATUIN_PASS=$($OP read "op://Kubernetes/Atuin/{{ .context }}-password")
+        ATUIN_PASS=$($OP read "op://Kubernetes/Atuin/{{ if hasPrefix "personal-" .context }}personal{{ else }}{{ .context }}{{ end }}-password")
         ATUIN_KEY=$($OP read "op://Kubernetes/Atuin/encryption-key")
         # Back up local state — atuin login re-encrypts before server validates
         ATUIN_DATA="$HOME/.local/share/atuin"
@@ -94,6 +98,18 @@ fi
 echo "--- Kubeconfig ---"
 echo "Manual step: copy homelab.yaml to ~/.kube/"
 echo "  From host: cp ~/.kube/homelab.yaml ~/.distrobox/{{ .context }}/.kube/"
+{{ end -}}
+
+{{ if hasPrefix "personal-" .context -}}
+# ─── GitLab (self-hosted — personal-<project>) ────────────────────────
+if command -v glab &>/dev/null; then
+    echo "--- GitLab (gitlab.k8s.rommelporras.com) ---"
+    GLAB_TOKEN=$($OP read "op://Kubernetes/Gitlab/personal-access-token")
+    echo "$GLAB_TOKEN" | glab auth login --hostname gitlab.k8s.rommelporras.com --stdin
+    echo "glab: done"
+else
+    echo "glab: not installed, skipping"
+fi
 {{ end -}}
 
 {{ if .has_work_creds -}}

@@ -25,11 +25,15 @@ Templates use two variables: **platform** (auto-detected) and **context** (user-
 | `aurora` | `personal` | Personal laptop — launches Distrobox containers |
 | `distrobox` | `work-eam` | Work projects with work credentials |
 | `distrobox` | `personal` | Personal projects with homelab credentials |
+| `distrobox` | `personal-<project>` | Project-scoped dev (native `op` CLI, Bun, Playwright, no homelab) |
 | `distrobox` | `sandbox` | Clean experiment space, no credentials |
 
-Adding a new work context (e.g., `work-acme`): add a container to `containers/distrobox.ini`,
-add job-specific aliases in `dot_zshrc.tmpl`, run `distrobox-setup.sh work-acme`. Shared work
-tools (Terraform, work email) apply automatically via `hasPrefix .context "work-"`.
+**Adding contexts:** For work: add a container to `containers/distrobox.ini`, add job-specific
+aliases in `dot_zshrc.tmpl`, run `distrobox-setup.sh work-acme`. Shared work tools (Terraform,
+work email) apply automatically via `hasPrefix .context "work-"`. For personal projects:
+add a container to `distrobox.ini`, run `distrobox-setup.sh personal-<project>`. Gets glab,
+Bun, Playwright, native 1Password CLI (biometric unlock), and OTel telemetry — but no homelab
+kubeconfig or Ansible.
 
 ## Quick Start
 
@@ -151,7 +155,7 @@ chezmoi will ask you:
 
 | Prompt | What to enter |
 |---|---|
-| Context | `personal`, `work-eam`, `work-<name>`, `gaming`, or `sandbox` |
+| Context | `personal`, `personal-<project>`, `work-eam`, `work-<name>`, `gaming`, or `sandbox` |
 | Personal git email | Your personal email (skipped for sandbox and non-WSL work contexts) |
 | Work git email | Your work email (only for `work-*` contexts) |
 | Work credentials? | `true` if this machine has AWS/EKS access (only for `work-*` contexts) |
@@ -280,7 +284,7 @@ containers are forwarded to the Aurora host via `distrobox-host-exec`.
 Enter a container:
 
 ```bash
-distrobox enter work-eam  # or: personal, sandbox
+distrobox enter work-eam  # or: personal, personal-fintrack, sandbox
 ```
 
 **Updating dotfiles inside a container:**
@@ -388,6 +392,7 @@ podman secret create gemini_key <(echo "AI...")
 | Scenario | Where | Why |
 |---|---|---|
 | Daily dev with cluster access | `distrobox enter personal` | Needs kubeconfig, SSH keys |
+| Project-scoped dev (e.g., fintrack) | `distrobox enter personal-fintrack` | Native `op`, Bun, Playwright, no homelab |
 | Vibe-coding with git push | `ai-sandbox --git` | Contained, can push via deploy key |
 | Trying untrusted AI tool | `ai-sandbox --no-network` | No network, can't exfiltrate |
 | Work Terraform/EKS | `distrobox enter work-eam` | Needs AWS + EKS credentials |
@@ -464,7 +469,10 @@ dotfiles/
 │       └── git/               # Git identity includes + global gitignore
 ├── bin/                       # CLI tools (ai-sandbox)
 ├── containers/                # Containerfile.ai-sandbox + distrobox.ini
-├── scripts/                   # Setup automation (distrobox-setup.sh, windows-git-setup.ps1)
+├── scripts/                   # Setup + testing automation
+│   ├── distrobox-setup.sh     # Container creation + chezmoi bootstrap
+│   ├── test-distrobox-integration.sh  # E2E test (delete → create → bootstrap → verify → delete)
+│   └── windows-git-setup.ps1  # Windows git setup for WSL
 └── hooks/                     # Git hooks (gitleaks pre-commit)
 ```
 
@@ -508,6 +516,26 @@ Plugins and MCP servers require CLI commands (not just config files):
   Context7 MCP setup automatically via `distrobox-host-exec op` for the API key.
 - **Aurora/WSL:** Run the `claude plugin` and `claude mcp` commands manually after bootstrap
   (see [credential setup](#2-set-up-credentials-per-machine) for the exact commands).
+
+## Testing
+
+Integration tests verify the full distrobox lifecycle: delete container, create, bootstrap
+chezmoi (non-interactive), verify deployed state, then clean up.
+
+```bash
+# Test a single container (default: personal-fintrack)
+scripts/test-distrobox-integration.sh
+
+# Test all containers (sandbox, personal, personal-fintrack, work-eam)
+scripts/test-distrobox-integration.sh --all
+
+# Keep container after test for manual inspection
+scripts/test-distrobox-integration.sh --keep personal
+```
+
+Each container type has context-specific assertions (SSH agent config, installed tools,
+aliases, credential directories). The test pre-seeds all chezmoi config to skip interactive
+prompts and skips `setup-creds` (requires 1Password).
 
 ## History Migration
 

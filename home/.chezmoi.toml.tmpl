@@ -8,7 +8,7 @@
 {{-   $platform = "wsl" -}}
 {{- end -}}
 
-{{- $context := promptStringOnce . "context" "Context (personal/work-eam/work-<name>/gaming/sandbox)" -}}
+{{- $context := promptStringOnce . "context" "Context (personal/personal-<project>/work-eam/work-<name>/gaming/sandbox)" -}}
 
 {{/* Smart defaults — only prompt for what's relevant */}}
 {{- $personalEmail := "" -}}
@@ -39,6 +39,9 @@
 {{-   $atuinAccount = promptStringOnce . "atuin_account" "Atuin account (rommel-personal/work-eam/work-<name>/none)" -}}
 {{- end -}}
 
+{{/* Derived: personal-<project> containers get native op CLI instead of distrobox-host-exec */}}
+{{- $hasOpCli := and (hasPrefix "personal-" $context) (eq $platform "distrobox") -}}
+
 [data]
   platform = {{ $platform | quote }}
   context = {{ $context | quote }}
@@ -46,5 +49,6 @@
   work_email = {{ $workEmail | quote }}
   has_work_creds = {{ $hasWorkCreds }}
   has_homelab_creds = {{ $hasHomelabCreds }}
+  has_op_cli = {{ $hasOpCli }}
   atuin_sync_address = {{ $atuinSyncAddress | quote }}
   atuin_account = {{ $atuinAccount | quote }}

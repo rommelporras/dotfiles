@@ -101,6 +101,25 @@ if ! command -v atuin &>/dev/null; then
 fi
 {{ end -}}
 
+{{ if and (hasPrefix "personal-" .context) (eq .platform "distrobox") -}}
+# 1Password CLI (personal-<project> distrobox — native op with biometric unlock)
+if ! command -v op &>/dev/null; then
+    echo "Installing 1Password CLI..."
+    sudo apt-get update -qq
+    curl -sS https://downloads.1password.com/linux/keys/1password.asc | \
+        sudo gpg --dearmor --output /usr/share/keyrings/1password-archive-keyring.gpg
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/1password-archive-keyring.gpg] https://downloads.1password.com/linux/debian/$(dpkg --print-architecture) stable main" | \
+        sudo tee /etc/apt/sources.list.d/1password.list
+    sudo mkdir -p /etc/debsig/policies/AC2D62742012EA22/
+    curl -sS https://downloads.1password.com/linux/debian/debsig/1password.pol | \
+        sudo tee /etc/debsig/policies/AC2D62742012EA22/1password.pol
+    sudo mkdir -p /usr/share/debsig/keyrings/AC2D62742012EA22
+    curl -sS https://downloads.1password.com/linux/keys/1password.asc | \
+        sudo gpg --dearmor --output /usr/share/debsig/keyrings/AC2D62742012EA22/debsig.gpg
+    sudo apt-get update -qq && sudo apt-get install -y -qq 1password-cli
+fi
+{{ end -}}
+
 # Node.js LTS (Aurora — needed for Claude Code MCP plugins like playwright)
 if [ "$IS_AURORA" = true ] && ! command -v node &>/dev/null; then
     echo "Installing node@24 (LTS) via brew..."
@@ -139,11 +158,21 @@ if [ ! -d "$HOME/.nvm" ]; then
 fi
 {{ end -}}
 
-{{ if eq .platform "wsl" -}}
-# Bun (WSL only)
+{{ if or (eq .platform "wsl") (and (hasPrefix "personal-" .context) (eq .platform "distrobox")) -}}
+# Bun (WSL and personal-<project> distrobox)
 if ! command -v bun &>/dev/null; then
     echo "Installing bun..."
     curl -fsSL https://bun.sh/install | bash
+fi
+{{ end -}}
+
+{{ if and (hasPrefix "personal-" .context) (eq .platform "distrobox") -}}
+# Playwright (personal-<project> distrobox — E2E testing)
+if [ ! -d "$HOME/.cache/ms-playwright" ]; then
+    echo "Installing Playwright (chromium)..."
+    export BUN_INSTALL="$HOME/.bun"
+    export PATH="$BUN_INSTALL/bin:$PATH"
+    bun x playwright install --with-deps chromium
 fi
 {{ end -}}
 
@@ -158,8 +187,8 @@ if ! command -v terraform &>/dev/null && [ "$IS_DISTROBOX" = true ]; then
 fi
 {{ end -}}
 
-{{ if and (eq .context "personal") (eq .platform "distrobox") -}}
-# glab CLI (personal distrobox only — Aurora installs via brew)
+{{ if and (or (eq .context "personal") (hasPrefix "personal-" .context)) (eq .platform "distrobox") -}}
+# glab CLI (personal/personal-<project> distrobox — Aurora installs via brew)
 if ! command -v glab &>/dev/null; then
     echo "Installing glab..."
     GLAB_VERSION=$(curl -sI "https://gitlab.com/gitlab-org/cli/-/releases/permalink/latest" | grep -i location | grep -oP 'v\K[0-9.]+')
@@ -167,7 +196,9 @@ if ! command -v glab &>/dev/null; then
     sudo dpkg -i /tmp/glab.deb
     rm -f /tmp/glab.deb
 fi
+{{ end -}}
 
+{{ if and (eq .context "personal") (eq .platform "distrobox") -}}
 # Ansible (personal distrobox only — Aurora installs via brew)
 if ! command -v ansible &>/dev/null; then
     echo "Installing ansible..."
@@ -201,8 +232,13 @@ if [ "$IS_WSL" = true ]; then
     echo ""
 fi
 echo "Credential setup (do these once):"
+{{ if hasPrefix "personal-" .context -}}
+echo "  1. SSH keys:     Copy private + public keys to ~/.ssh/ (chmod 600/644)"
+echo "                   No 1Password SSH agent — keys are local"
+{{ else -}}
 echo "  1. SSH keys:     Copy .pub files to ~/.ssh/ (chmod 644)"
 echo "                   Private keys stay in 1Password — SSH agent serves them"
+{{ end -}}
 {{ if .has_work_creds -}}
 echo "  2. AWS:          aws sso login --profile <name>"
 {{ end -}}

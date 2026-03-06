@@ -10,7 +10,7 @@ HOST_USER="$(whoami)"
 REPO_DIR="${REPO_DIR/#\/var\/home\//\/home\/}"
 
 usage() {
-    echo "Usage: $(basename "$0") [work-eam|work-<name>|personal|gaming|sandbox]"
+    echo "Usage: $(basename "$0") [work-eam|work-<name>|personal|personal-<project>|gaming|sandbox]"
     echo ""
     echo "Set up Distrobox containers and bootstrap chezmoi inside them."
     echo "With no argument, sets up all containers defined in distrobox.ini."
@@ -35,9 +35,9 @@ if [ $# -eq 0 ]; then
     CONTAINERS=(work-eam personal sandbox)
 elif [ $# -eq 1 ]; then
     case "$1" in
-        work-*|personal|gaming|sandbox) CONTAINERS=("$1") ;;
+        work-*|personal-*|personal|gaming|sandbox) CONTAINERS=("$1") ;;
         -h|--help) usage ;;
-        *) echo "Error: unknown container '$1'. Choose: work-<name>, personal, gaming, sandbox"; exit 1 ;;
+        *) echo "Error: unknown container '$1'. Choose: work-<name>, personal, personal-<project>, gaming, sandbox"; exit 1 ;;
     esac
 else
     usage
@@ -65,6 +65,7 @@ for container in "${CONTAINERS[@]}"; do
             curl -fsLS get.chezmoi.io | sh
         fi
         # Link chezmoi source to host repo (live edits without cloning)
+        mkdir -p \"\$HOME/.local/share\"
         rm -rf \"\$HOME/.local/share/chezmoi\"
         ln -s '$REPO_DIR' \"\$HOME/.local/share/chezmoi\"
         echo 'Linked chezmoi source → $REPO_DIR'
