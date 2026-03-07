@@ -13,10 +13,9 @@ Run these on the **Aurora host** (not inside a container):
 
 2. **Distrobox** — installed by `ujust devmode` on Aurora DX.
 
-3. **1Password signed in** (for credential seeding on non-sandbox containers):
-   ```bash
-   eval $(op signin --account my)
-   ```
+3. **1Password unlocked** (for credential seeding on non-sandbox containers):
+   Open the 1Password desktop app and unlock it. Ensure CLI integration is enabled:
+   Settings → Developer → **Integrate with 1Password CLI**.
 
 4. **Working directory** — all commands assume you're in the repo root:
    ```bash
@@ -36,27 +35,35 @@ Creates a Distrobox container, bootstraps chezmoi inside it, and runs credential
 | Argument | Required | Description |
 |---|---|---|
 | `container` | No | Container name to set up. Without this, creates all default containers (work-eam, personal, sandbox). |
-| `--personal-email` | No | Personal git email address. |
-| `--work-email` | No | Work git email address. |
+| `--personal-email` | No | Personal git email. Required for non-interactive personal/personal-\*/gaming. |
+| `--work-email` | No | Work git email. Required for non-interactive work-\* containers. |
 
 ### Config modes
 
-The script has two config modes based on whether email flags are provided:
+The script has two config modes. Each context only needs its relevant email:
 
-**Non-interactive (recommended):** When both `--personal-email` and `--work-email` are
-provided, the script generates a complete chezmoi config with all values derived from the
-container name. No interactive prompts — chezmoi applies immediately.
+**Non-interactive (recommended):** Provide the email flag relevant to the context.
+All other config values are derived automatically from the container name.
+
+| Context | Required flag | Optional flag |
+|---|---|---|
+| personal, personal-\*, gaming | `--personal-email` | `--work-email` |
+| work-\* | `--work-email` | `--personal-email` |
+| sandbox | (none) | — |
 
 ```bash
-# Non-interactive — all config derived from context name
+# Personal — only needs personal email
 uv run python scripts/distrobox_setup.py personal \
-  --personal-email git@rommelporras.com \
+  --personal-email git@rommelporras.com
+
+# Work — only needs work email
+uv run python scripts/distrobox_setup.py work-eam \
   --work-email work@company.com
 ```
 
-**Interactive (fallback):** When email flags are omitted, the script pre-seeds only
-`platform=distrobox` and `context=<name>`. chezmoi then prompts for the remaining values
-(email, Atuin, credentials).
+**Interactive (fallback):** When the required email flag is omitted, the script pre-seeds
+only `platform=distrobox` and `context=<name>`. chezmoi then prompts for the remaining
+values (email, Atuin, credentials).
 
 ```bash
 # Interactive — chezmoi prompts for remaining values
@@ -81,17 +88,19 @@ All values except email are automatically derived from the container name:
 ### Examples
 
 ```bash
-# Set up personal container (non-interactive)
+# Set up personal container (only personal email needed)
 uv run python scripts/distrobox_setup.py personal \
-  --personal-email git@rommelporras.com \
-  --work-email work@company.com
+  --personal-email git@rommelporras.com
 
-# Set up work container
+# Set up personal-fintrack (only personal email needed)
+uv run python scripts/distrobox_setup.py personal-fintrack \
+  --personal-email git@rommelporras.com
+
+# Set up work container (only work email needed)
 uv run python scripts/distrobox_setup.py work-eam \
-  --personal-email git@rommelporras.com \
   --work-email work@company.com
 
-# Set up all default containers (work-eam, personal, sandbox)
+# Set up all default containers (provide both for mixed contexts)
 uv run python scripts/distrobox_setup.py \
   --personal-email git@rommelporras.com \
   --work-email work@company.com
@@ -175,7 +184,7 @@ Full lifecycle test: delete → create → bootstrap → verify → delete.
 # Test default container (personal-fintrack)
 uv run python scripts/test_distrobox_integration.py
 
-# Test all containers (73 assertions across 4 containers)
+# Test all containers (77 assertions across 4 containers)
 uv run python scripts/test_distrobox_integration.py --all
 
 # Test specific container, keep it for inspection
@@ -190,9 +199,9 @@ uv run python scripts/test_distrobox_integration.py personal work-eam
 | Container | Assertions | Key checks |
 |---|---|---|
 | sandbox | 15 | No creds, no atuin sync, no setup-creds, SSH_AUTH_SOCK unset |
-| personal | 19 | glab, ansible, atuin sync, 1Password SSH, homelab aliases |
+| personal | 20 | glab, ansible, kubectl, atuin sync, 1Password SSH, homelab aliases |
 | personal-fintrack | 22 | op CLI, bun, glab, atuin sync, no homelab, OP_BIOMETRIC |
-| work-eam | 17 | terraform, EAM aliases, atuin sync, 1Password SSH |
+| work-eam | 20 | terraform, aws CLI, kubectl, EAM aliases, atuin sync, 1Password SSH |
 
 The test uses `full_config_for()` with test email defaults — fully non-interactive,
 no 1Password dependency.

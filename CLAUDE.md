@@ -60,8 +60,8 @@ Templates use two variables:
 | wsl | work-eam | 1Password via npiperelay | NVM/Bun, work + personal creds |
 | wsl | gaming | 1Password via npiperelay | NVM/Bun, personal creds |
 | aurora | personal | 1Password native socket | Immutable OS, no chsh, Atuin sync |
-| distrobox | work-eam | 1Password via absolute host path | Work AWS/EKS creds, Terraform |
-| distrobox | personal | 1Password via absolute host path | Homelab kubeconfig, glab, Ansible |
+| distrobox | work-eam | 1Password via absolute host path | AWS CLI, kubectl, Terraform, work creds |
+| distrobox | personal | 1Password via absolute host path | kubectl, homelab kubeconfig, glab, Ansible |
 | distrobox | personal-\<project\> | No 1Password SSH (manual keys) | Native op CLI, Bun, Playwright, glab, no homelab |
 | distrobox | sandbox | Fallback ssh-agent | No creds, no Claude config |
 

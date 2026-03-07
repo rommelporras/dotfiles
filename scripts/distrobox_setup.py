@@ -43,14 +43,42 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--personal-email",
         default=None,
-        help="Personal git email. When both emails are provided, skips interactive prompts.",
+        help="Personal git email (required for non-interactive personal/personal-*/gaming).",
     )
     parser.add_argument(
         "--work-email",
         default=None,
-        help="Work git email. When both emails are provided, skips interactive prompts.",
+        help="Work git email (required for non-interactive work-* containers).",
     )
     return parser.parse_args(argv)
+
+
+def _resolve_config(container: str, args: argparse.Namespace) -> str:
+    """Determine chezmoi config for a container — non-interactive when possible.
+
+    Each context only requires its relevant email:
+    - sandbox: always non-interactive, no emails needed
+    - personal, personal-*, gaming: needs --personal-email
+    - work-*: needs --work-email (personal_email defaults to placeholder)
+    Falls back to interactive (partial_config) when the required email is missing.
+    """
+    if container == "sandbox":
+        return full_config_for(container, "sandbox@localhost", "sandbox@localhost")
+
+    if container.startswith("work-"):
+        if args.work_email:
+            personal = args.personal_email or "personal@placeholder.local"
+            console.print("Config mode: non-interactive")
+            return full_config_for(container, personal, args.work_email)
+    else:
+        # personal, personal-*, gaming
+        if args.personal_email:
+            work = args.work_email or "work@placeholder.local"
+            console.print("Config mode: non-interactive")
+            return full_config_for(container, args.personal_email, work)
+
+    console.print("Config mode: interactive (missing required email flag)")
+    return partial_config(container)
 
 
 def main(argv: list[str] | None = None) -> None:
@@ -99,24 +127,13 @@ def main(argv: list[str] | None = None) -> None:
 
     repo = repo_dir()
 
-    # Determine config mode: non-interactive (emails provided) or interactive
-    non_interactive = args.personal_email is not None and args.work_email is not None
-    if non_interactive:
-        console.print(f"Config mode: non-interactive (emails provided)")
-
     for container in containers:
         console.print()
         console.print(f"[bold]--- Bootstrapping '{container}' container ---[/]")
         console.print(f"Context: {container} (platform auto-detected as distrobox)")
         console.print()
 
-        if container == "sandbox":
-            # Sandbox needs no real config — always non-interactive
-            config = full_config_for(container, "sandbox@localhost", "sandbox@localhost")
-        elif non_interactive:
-            config = full_config_for(container, args.personal_email, args.work_email)
-        else:
-            config = partial_config(container)
+        config = _resolve_config(container, args)
         bootstrap_chezmoi(container, repo, config)
 
         # Seed credentials for non-sandbox containers

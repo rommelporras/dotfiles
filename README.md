@@ -30,8 +30,8 @@ Templates use two variables: **platform** (auto-detected) and **context** (user-
 
 **Adding contexts:** For work: add a container to `containers/distrobox.ini`, add job-specific
 aliases in `dot_zshrc.tmpl`, run the [setup script](docs/distrobox-scripts.md) with
-`work-acme`. Shared work tools (Terraform, work email) apply automatically via
-`hasPrefix .context "work-"`. For personal projects: add a container to `distrobox.ini`,
+`work-acme`. Shared work tools (AWS CLI, kubectl, Terraform, work email) apply automatically
+via `hasPrefix .context "work-"`. For personal projects: add a container to `distrobox.ini`,
 run the setup script with `personal-<project>`. Gets glab, Bun, Playwright, native 1Password
 CLI (biometric unlock), and OTel telemetry — but no homelab kubeconfig or Ansible.
 
@@ -167,8 +167,9 @@ Platform (`wsl`, `aurora`, `distrobox`) is auto-detected — you'll never be pro
 Answers are saved locally to `~/.config/chezmoi/chezmoi.toml` and never committed.
 
 The bootstrap script automatically installs: zsh, Starship, Claude Code (native installer),
-and environment-specific tools (FZF, xclip, NVM, Bun, Terraform, glab, Ansible) based on
-your environment. On Aurora, most tools are pre-installed via brew/RPM and skipped.
+and environment-specific tools (FZF, xclip, NVM, Bun, AWS CLI, kubectl, Terraform, glab,
+Ansible) based on your environment. On Aurora, most tools are pre-installed via brew/RPM
+and skipped.
 
 **After install, restart your shell:**
 
@@ -262,23 +263,32 @@ atuin login -u <account-name> \
 
 ### 3. Aurora DX only: set up Distrobox containers
 
+Ensure 1Password desktop app is unlocked and CLI integration is enabled
+(Settings → Developer → **Integrate with 1Password CLI**). This lets `op` commands
+authenticate via biometric/system password instead of manual signin.
+
+Then create containers:
+
 ```bash
 cd ~/personal/dotfiles
 
-# Single container (non-interactive — recommended)
+# Personal container — only needs personal email
 uv run python scripts/distrobox_setup.py personal \
-  --personal-email git@rommelporras.com \
+  --personal-email git@rommelporras.com
+
+# Work container — only needs work email
+uv run python scripts/distrobox_setup.py work-eam \
   --work-email work@company.com
 
-# All default containers (work-eam, personal, sandbox)
+# All default containers (provide both for mixed contexts)
 uv run python scripts/distrobox_setup.py \
   --personal-email git@rommelporras.com \
   --work-email work@company.com
 ```
 
-When both `--personal-email` and `--work-email` are provided, the script runs fully
-non-interactive — all other config values are derived from the container name. Without
-email flags, chezmoi prompts interactively. Sandbox is always non-interactive.
+Each context only requires its relevant email flag — the rest is derived from the
+container name. Without the flag, chezmoi prompts interactively. Sandbox is always
+non-interactive (no flags needed).
 
 See [docs/distrobox-scripts.md](docs/distrobox-scripts.md) for full parameter reference,
 config derivation table, and verification steps.
@@ -523,7 +533,7 @@ Plugins and MCP servers require CLI commands (not just config files):
 ## Testing
 
 Integration tests verify the full distrobox lifecycle: delete → create → bootstrap →
-verify → delete. 73 assertions across 4 container types.
+verify → delete. 77 assertions across 4 container types.
 
 ```bash
 cd ~/personal/dotfiles

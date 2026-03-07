@@ -1,3 +1,6 @@
+# Ensure $SHELL matches the running shell (distrobox inherits host's $SHELL)
+export SHELL=$(command -v zsh)
+
 # Path
 export PATH="$HOME/.local/bin:$PATH"
 

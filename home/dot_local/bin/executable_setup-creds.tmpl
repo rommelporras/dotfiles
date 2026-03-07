@@ -15,11 +15,9 @@ if ! command -v distrobox-host-exec &>/dev/null; then
     exit 1
 fi
 
-{{ if hasPrefix "personal-" .context -}}
-OP="op"
-{{ else -}}
+# Always use host op for setup — native op inside personal-* containers
+# lacks desktop app integration. Native op is for interactive use after setup.
 OP="distrobox-host-exec op"
-{{ end -}}
 
 # ─── Claude Code plugins (no 1Password dependency for install) ────────
 if command -v claude &>/dev/null; then

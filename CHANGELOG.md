@@ -9,9 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Non-interactive mode for distrobox setup via `--personal-email` and `--work-email` CLI flags
+- Non-interactive mode for distrobox setup — each context only needs its relevant email flag
 - All config values (Atuin, credentials, op CLI) derived automatically from context name
 - Sandbox containers always skip interactive prompts (no email flags needed)
+- AWS CLI v2 auto-install for work-* distrobox containers
+- kubectl auto-install for work-* and personal distrobox containers
+- `apt-get upgrade` early in bootstrap to patch base packages on apt-based systems
 - `docs/distrobox-scripts.md` — full parameter reference for setup and test scripts
 
 ### Changed
@@ -24,10 +27,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `_command_exists()` uses `shutil.which()` instead of broken shell subprocess
 - Single-container setup creates only the requested container (not all via `distrobox assemble`)
 - Update Atuin account names from legacy `rommel-*` to current naming convention
-- Integration tests expanded to 73 assertions (from 64) — added Atuin config verification
+- `setup-creds` always uses `distrobox-host-exec op` (personal-* native op lacks desktop app integration for initial setup)
+- Integration tests expanded to 77 assertions (from 64) — added kubectl, AWS CLI, Atuin config verification
 
 ### Fixed
 
+- `$SHELL` showing `bash` inside distrobox containers (host's `$SHELL` leaked via distrobox; `.zshrc` now sets it correctly)
+- Bootstrap `ln -sf` → `ln -sfn` for claude-config symlinks (prevents recursive symlinks when target is existing directory)
 - `setup-creds` crash when Context7 MCP server already configured (`claude mcp add` non-zero exit with `set -e`)
 - `setup-creds` Atuin error message showing wrong 1Password field for `personal-*` contexts
 - `chezmoi.toml.tmpl` Atuin prompt hint updated from `rommel-personal/rommel-eam` to `personal/work-eam`

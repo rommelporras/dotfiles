@@ -105,6 +105,7 @@ class ContainerTest:
         console.print("  --- personal-specific assertions ---")
         self.assert_executable("setup-creds is executable", "$HOME/.local/bin/setup-creds")
         self.assert_exec("glab installed", "command -v glab")
+        self.assert_exec("kubectl installed", "command -v kubectl")
         self.assert_file("atuin installed", "$HOME/.atuin/bin/atuin")
         self.assert_file("atuin config exists", "$HOME/.config/atuin/config.toml")
         self.assert_contains("atuin sync_address set", "$HOME/.config/atuin/config.toml", "atuin.k8s.rommelporras.com")
@@ -141,6 +142,9 @@ class ContainerTest:
         self.assert_contains("SSH_AUTH_SOCK = 1Password", "$HOME/.zshrc", "1password/agent.sock")
         self.assert_contains("terraform alias tfi", "$HOME/.zshrc", "tfi")
         self.assert_contains("EAM alias", "$HOME/.zshrc", "eam-sre")
+        self.assert_exec("aws CLI installed", "command -v aws")
+        self.assert_exec("kubectl installed", "command -v kubectl")
+        self.assert_exec("terraform installed", "command -v terraform")
         self.assert_not_contains("no invoicetron alias", "$HOME/.zshrc", "invoicetron")
         self.assert_not_contains("no OP_BIOMETRIC", "$HOME/.zshrc", "OP_BIOMETRIC_UNLOCK_ENABLED")
 
