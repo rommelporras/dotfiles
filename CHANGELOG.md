@@ -5,6 +5,33 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- Non-interactive mode for distrobox setup via `--personal-email` and `--work-email` CLI flags
+- All config values (Atuin, credentials, op CLI) derived automatically from context name
+- Sandbox containers always skip interactive prompts (no email flags needed)
+- `docs/distrobox-scripts.md` — full parameter reference for setup and test scripts
+
+### Changed
+
+- Migrate distrobox scripts from shell to Python (`distrobox_setup.py`, `test_distrobox_integration.py`, `distrobox_lib.py`)
+- Remove shell shims (`distrobox-setup.sh`, `test-distrobox-integration.sh`) — invoke via `uv run python`
+- `full_config_for()` accepts optional email parameters (backward-compatible defaults for tests)
+- `bootstrap_chezmoi()` has 15-minute timeout to prevent hangs
+- `run_setup_creds()` returns exit code instead of raising on failure
+- `_command_exists()` uses `shutil.which()` instead of broken shell subprocess
+- Single-container setup creates only the requested container (not all via `distrobox assemble`)
+- Update Atuin account names from legacy `rommel-*` to current naming convention
+- Integration tests expanded to 73 assertions (from 64) — added Atuin config verification
+
+### Fixed
+
+- `setup-creds` crash when Context7 MCP server already configured (`claude mcp add` non-zero exit with `set -e`)
+- `setup-creds` Atuin error message showing wrong 1Password field for `personal-*` contexts
+- `chezmoi.toml.tmpl` Atuin prompt hint updated from `rommel-personal/rommel-eam` to `personal/work-eam`
+
 ## [v1.4.0] - 2026-03-06
 
 ### Added

@@ -136,8 +136,16 @@ def partial_config(context: str) -> str:
 ATUIN_SYNC_ADDRESS = "https://atuin.k8s.rommelporras.com"
 
 
-def full_config_for(context: str) -> str:
-    """Generate a full chezmoi TOML config (non-interactive — all values pre-filled)."""
+def full_config_for(
+    context: str,
+    personal_email: str = "test@example.com",
+    work_email: str = "test@company.com",
+) -> str:
+    """Generate a full chezmoi TOML config (non-interactive — all values pre-filled).
+
+    When called without email args (e.g. from the test script), uses test defaults.
+    When called with real emails (e.g. from the setup script), produces a production config.
+    """
     atuin_account = "none"
     atuin_sync_address = ""
     has_homelab_creds = "false"
@@ -162,8 +170,8 @@ def full_config_for(context: str) -> str:
 [data]
   platform = "distrobox"
   context = "{context}"
-  personal_email = "test@example.com"
-  work_email = "test@company.com"
+  personal_email = "{personal_email}"
+  work_email = "{work_email}"
   has_work_creds = {has_work_creds}
   has_homelab_creds = {has_homelab_creds}
   has_op_cli = {has_op_cli}

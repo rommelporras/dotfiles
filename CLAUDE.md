@@ -7,6 +7,10 @@ WSL2 (Ubuntu 24.04), Aurora DX (immutable Fedora), and Distrobox containers. Use
 two-variable model (`platform` + `context`) for scalable environment targeting with
 credential isolation and AI agent sandboxing.
 
+## Branching
+
+Trunk-based development. All commits go directly to `main`. No feature branches.
+
 ## Repository Structure
 
 ```
@@ -22,10 +26,13 @@ dotfiles/
 │   ├── dot_local/bin/                   # User scripts (~/.local/bin/)
 │   │   └── executable_setup-creds.tmpl  # Credential + plugin seeding for distrobox
 │   └── dot_config/                      # ~/.config/ files
-├── scripts/                             # Setup automation
-│   ├── distrobox-setup.sh               # Container creation + chezmoi bootstrap
-│   ├── test-distrobox-integration.sh    # E2E test: delete → create → bootstrap → verify → delete
+├── scripts/                             # Setup automation (Python, invoke via uv run)
+│   ├── distrobox_setup.py               # Container creation + chezmoi bootstrap
+│   ├── distrobox_lib.py                 # Shared library for distrobox scripts
+│   ├── test_distrobox_integration.py    # E2E test: delete → create → bootstrap → verify → delete
 │   └── windows-git-setup.ps1            # Windows git setup for WSL
+├── docs/                                # Reference documentation
+│   └── distrobox-scripts.md             # Distrobox scripts parameter reference
 ├── containers/                          # Distrobox + Podman definitions
 │   ├── distrobox.ini                    # Container definitions (work-eam, personal, personal-fintrack, sandbox)
 │   └── Containerfile.ai-sandbox         # AI sandbox container (Ubuntu 24.04, Claude Code, Node.js, Python, uv)
@@ -59,18 +66,19 @@ Templates use two variables:
 | distrobox | sandbox | Fallback ssh-agent | No creds, no Claude config |
 
 **Adding contexts:** For work: add container to `distrobox.ini`, add job-specific aliases
-in `dot_zshrc.tmpl`, run `distrobox-setup.sh work-acme`. Shared work tools apply via
+in `dot_zshrc.tmpl`, run `distrobox_setup.py work-acme`. Shared work tools apply via
 `hasPrefix .context "work-"`. For personal projects: add container to `distrobox.ini`,
-run `distrobox-setup.sh personal-<project>`. Shared personal tools (glab, Bun, Playwright,
+run `distrobox_setup.py personal-<project>`. Shared personal tools (glab, Bun, Playwright,
 native `op` CLI) apply via `hasPrefix .context "personal-"`.
 
 ### Distrobox chezmoi workflow
 
-`scripts/distrobox-setup.sh` bootstraps containers with chezmoi:
+`scripts/distrobox_setup.py` bootstraps containers with chezmoi (see
+[docs/distrobox-scripts.md](docs/distrobox-scripts.md) for full reference):
 1. Installs chezmoi inside the container (`~/bin/chezmoi`)
 2. Symlinks `~/.local/share/chezmoi` → host repo (uncommitted changes apply immediately)
-3. Pre-seeds `platform=distrobox` + `context=<name>` in `~/.config/chezmoi/chezmoi.toml`
-4. Runs `chezmoi init --apply` (prompts for remaining values)
+3. Writes chezmoi config (non-interactive when `--personal-email`/`--work-email` provided)
+4. Runs `chezmoi init --apply`
 5. Runs `setup-creds` to seed plugins, MCP, and credentials from 1Password (non-sandbox only)
 
 Inside containers, `$HOME` is `~/.distrobox/<context>/` (NOT the host home). Paths to

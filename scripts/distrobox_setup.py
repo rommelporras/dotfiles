@@ -15,6 +15,7 @@ from distrobox_lib import (
     container_assemble,
     container_create,
     distrobox_ini_path,
+    full_config_for,
     parse_distrobox_ini,
     partial_config,
     repo_dir,
@@ -38,6 +39,16 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
             "personal-<project>, gaming, sandbox). "
             "With no argument, sets up all default containers."
         ),
+    )
+    parser.add_argument(
+        "--personal-email",
+        default=None,
+        help="Personal git email. When both emails are provided, skips interactive prompts.",
+    )
+    parser.add_argument(
+        "--work-email",
+        default=None,
+        help="Work git email. When both emails are provided, skips interactive prompts.",
     )
     return parser.parse_args(argv)
 
@@ -88,13 +99,24 @@ def main(argv: list[str] | None = None) -> None:
 
     repo = repo_dir()
 
+    # Determine config mode: non-interactive (emails provided) or interactive
+    non_interactive = args.personal_email is not None and args.work_email is not None
+    if non_interactive:
+        console.print(f"Config mode: non-interactive (emails provided)")
+
     for container in containers:
         console.print()
         console.print(f"[bold]--- Bootstrapping '{container}' container ---[/]")
         console.print(f"Context: {container} (platform auto-detected as distrobox)")
         console.print()
 
-        config = partial_config(container)
+        if container == "sandbox":
+            # Sandbox needs no real config — always non-interactive
+            config = full_config_for(container, "sandbox@localhost", "sandbox@localhost")
+        elif non_interactive:
+            config = full_config_for(container, args.personal_email, args.work_email)
+        else:
+            config = partial_config(container)
         bootstrap_chezmoi(container, repo, config)
 
         # Seed credentials for non-sandbox containers

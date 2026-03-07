@@ -29,11 +29,11 @@ Templates use two variables: **platform** (auto-detected) and **context** (user-
 | `distrobox` | `sandbox` | Clean experiment space, no credentials |
 
 **Adding contexts:** For work: add a container to `containers/distrobox.ini`, add job-specific
-aliases in `dot_zshrc.tmpl`, run `distrobox-setup.sh work-acme`. Shared work tools (Terraform,
-work email) apply automatically via `hasPrefix .context "work-"`. For personal projects:
-add a container to `distrobox.ini`, run `distrobox-setup.sh personal-<project>`. Gets glab,
-Bun, Playwright, native 1Password CLI (biometric unlock), and OTel telemetry — but no homelab
-kubeconfig or Ansible.
+aliases in `dot_zshrc.tmpl`, run the [setup script](docs/distrobox-scripts.md) with
+`work-acme`. Shared work tools (Terraform, work email) apply automatically via
+`hasPrefix .context "work-"`. For personal projects: add a container to `distrobox.ini`,
+run the setup script with `personal-<project>`. Gets glab, Bun, Playwright, native 1Password
+CLI (biometric unlock), and OTel telemetry — but no homelab kubeconfig or Ansible.
 
 ## Quick Start
 
@@ -117,9 +117,9 @@ Continue to [Install chezmoi](#1-install-chezmoi-and-apply-dotfiles).
 8. SSH agent socket is at `~/.1password/agent.sock` (lowercase p).
    After chezmoi apply, `.zshrc` sets `SSH_AUTH_SOCK` automatically.
 
-9. Install Claude Code:
+9. Install Claude Code and uv (Python project manager — needed for distrobox scripts):
    ```bash
-   brew install claude-code
+   brew install claude-code uv
    ```
 
 10. Clone this repo (chezmoi is already installed via brew):
@@ -213,7 +213,7 @@ setup-creds    # Run inside any non-sandbox container
 
 This handles Claude Code plugin/marketplace installation, Context7 MCP registration,
 Atuin login, glab auth, and prints manual steps for kubeconfig/AWS. The script runs
-automatically during `distrobox-setup.sh` — you only need to run it manually if you
+automatically during container setup — you only need to run it manually if you
 skipped it or need to re-authenticate.
 
 **WSL and Aurora host** — set up credentials manually:
@@ -263,36 +263,36 @@ atuin login -u <account-name> \
 ### 3. Aurora DX only: set up Distrobox containers
 
 ```bash
-~/personal/dotfiles/scripts/distrobox-setup.sh            # All containers
-~/personal/dotfiles/scripts/distrobox-setup.sh personal   # Single container
+cd ~/personal/dotfiles
+
+# Single container (non-interactive — recommended)
+uv run python scripts/distrobox_setup.py personal \
+  --personal-email git@rommelporras.com \
+  --work-email work@company.com
+
+# All default containers (work-eam, personal, sandbox)
+uv run python scripts/distrobox_setup.py \
+  --personal-email git@rommelporras.com \
+  --work-email work@company.com
 ```
 
-The script:
-1. Creates containers from `containers/distrobox.ini`
-2. Installs chezmoi inside each container
-3. Symlinks chezmoi's source to the host repo (uncommitted changes apply immediately)
-4. Pre-seeds `platform=distrobox` and `context=<name>` in the chezmoi config
-5. Runs `chezmoi init --apply` (prompts for email, credentials, Atuin — sandbox skips all prompts)
-6. Runs `setup-creds` to seed plugins, MCP, and credentials from 1Password (non-sandbox only)
+When both `--personal-email` and `--work-email` are provided, the script runs fully
+non-interactive — all other config values are derived from the container name. Without
+email flags, chezmoi prompts interactively. Sandbox is always non-interactive.
+
+See [docs/distrobox-scripts.md](docs/distrobox-scripts.md) for full parameter reference,
+config derivation table, and verification steps.
 
 Container home directories persist at `~/.distrobox/<name>/` on the host — removing
-and recreating a container (`distrobox rm <name>`) preserves your data.
+and recreating a container preserves your data.
+
+```bash
+distrobox enter personal                # Enter a container
+~/bin/chezmoi apply -v && exec zsh      # Update dotfiles inside a container
+```
 
 **IDE forwarding:** `code` and `agy` (Antigravity) commands inside non-sandbox
 containers are forwarded to the Aurora host via `distrobox-host-exec`.
-
-Enter a container:
-
-```bash
-distrobox enter work-eam  # or: personal, personal-fintrack, sandbox
-```
-
-**Updating dotfiles inside a container:**
-
-```bash
-~/bin/chezmoi apply -v    # Picks up changes from the host repo (symlinked)
-exec zsh                  # Reload shell
-```
 
 ### 4. Aurora DX only: build AI sandbox
 
@@ -470,9 +470,12 @@ dotfiles/
 ├── bin/                       # CLI tools (ai-sandbox)
 ├── containers/                # Containerfile.ai-sandbox + distrobox.ini
 ├── scripts/                   # Setup + testing automation
-│   ├── distrobox-setup.sh     # Container creation + chezmoi bootstrap
-│   ├── test-distrobox-integration.sh  # E2E test (delete → create → bootstrap → verify → delete)
+│   ├── distrobox_setup.py     # Container creation + chezmoi bootstrap
+│   ├── distrobox_lib.py       # Shared library for distrobox scripts
+│   ├── test_distrobox_integration.py  # E2E test (delete → create → bootstrap → verify → delete)
 │   └── windows-git-setup.ps1  # Windows git setup for WSL
+├── docs/                      # Reference documentation
+│   └── distrobox-scripts.md   # Distrobox scripts parameter reference
 └── hooks/                     # Git hooks (gitleaks pre-commit)
 ```
 
@@ -519,23 +522,20 @@ Plugins and MCP servers require CLI commands (not just config files):
 
 ## Testing
 
-Integration tests verify the full distrobox lifecycle: delete container, create, bootstrap
-chezmoi (non-interactive), verify deployed state, then clean up.
+Integration tests verify the full distrobox lifecycle: delete → create → bootstrap →
+verify → delete. 73 assertions across 4 container types.
 
 ```bash
-# Test a single container (default: personal-fintrack)
-scripts/test-distrobox-integration.sh
+cd ~/personal/dotfiles
 
-# Test all containers (sandbox, personal, personal-fintrack, work-eam)
-scripts/test-distrobox-integration.sh --all
-
-# Keep container after test for manual inspection
-scripts/test-distrobox-integration.sh --keep personal
+uv run python scripts/test_distrobox_integration.py --all     # All containers
+uv run python scripts/test_distrobox_integration.py personal  # Single container
+uv run python scripts/test_distrobox_integration.py --keep personal  # Keep for inspection
 ```
 
-Each container type has context-specific assertions (SSH agent config, installed tools,
-aliases, credential directories). The test pre-seeds all chezmoi config to skip interactive
-prompts and skips `setup-creds` (requires 1Password).
+Tests pre-seed all chezmoi config (no interactive prompts, no 1Password dependency).
+See [docs/distrobox-scripts.md](docs/distrobox-scripts.md) for assertion counts per
+container and full parameter reference.
 
 ## History Migration
 
