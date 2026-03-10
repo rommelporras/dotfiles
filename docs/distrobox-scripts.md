@@ -184,7 +184,7 @@ Full lifecycle test: delete → create → bootstrap → verify → delete.
 # Test default container (personal-fintrack)
 uv run python scripts/test_distrobox_integration.py
 
-# Test all containers (77 assertions across 4 containers)
+# Test all containers (84 assertions across 4 containers)
 uv run python scripts/test_distrobox_integration.py --all
 
 # Test specific container, keep it for inspection
@@ -198,10 +198,10 @@ uv run python scripts/test_distrobox_integration.py personal work-eam
 
 | Container | Assertions | Key checks |
 |---|---|---|
-| sandbox | 15 | No creds, no atuin sync, no setup-creds, SSH_AUTH_SOCK unset |
-| personal | 20 | glab, ansible, kubectl, atuin sync, 1Password SSH, homelab aliases |
-| personal-fintrack | 22 | op CLI, bun, glab, atuin sync, no homelab, OP_BIOMETRIC |
-| work-eam | 20 | terraform, aws CLI, kubectl, EAM aliases, atuin sync, 1Password SSH |
+| sandbox | 16 | No creds, no atuin sync, no setup-creds, SSH_AUTH_SOCK unset, no IDE forwarding |
+| personal | 22 | glab, ansible, kubectl, atuin sync, 1Password SSH, homelab aliases, IDE forwarding |
+| personal-fintrack | 24 | op CLI, bun, glab, atuin sync, no homelab, OP_BIOMETRIC, IDE forwarding |
+| work-eam | 22 | terraform, aws CLI, kubectl, EAM aliases, atuin sync, 1Password SSH, IDE forwarding |
 
 The test uses `full_config_for()` with test email defaults — fully non-interactive,
 no 1Password dependency.

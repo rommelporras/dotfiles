@@ -533,7 +533,7 @@ Plugins and MCP servers require CLI commands (not just config files):
 ## Testing
 
 Integration tests verify the full distrobox lifecycle: delete → create → bootstrap →
-verify → delete. 77 assertions across 4 container types.
+verify → delete. 84 assertions across 4 container types.
 
 ```bash
 cd ~/personal/dotfiles

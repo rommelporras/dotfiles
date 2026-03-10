@@ -115,6 +115,8 @@ class ContainerTest:
         self.assert_contains("OTEL env vars", "$HOME/.zshrc", "OTEL_METRICS_EXPORTER")
         self.assert_exec("ansible installed", "command -v ansible")
         self.assert_not_contains("no OP_BIOMETRIC in .zshrc", "$HOME/.zshrc", "OP_BIOMETRIC_UNLOCK_ENABLED")
+        self.assert_contains("IDE forwarding: code", "$HOME/.zshrc", "distrobox-host-exec code")
+        self.assert_contains("IDE forwarding: antigravity/agy", "$HOME/.zshrc", "distrobox-host-exec antigravity")
 
     def verify_personal_fintrack(self) -> None:
         console.print("  --- personal-fintrack-specific assertions ---")
@@ -132,6 +134,8 @@ class ContainerTest:
         self.assert_not_contains("no invoicetron alias", "$HOME/.zshrc", "invoicetron")
         self.assert_not_contains("no kubectl-homelab alias", "$HOME/.zshrc", "kubectl-homelab")
         self.assert_contains("BUN_INSTALL in .zshrc", "$HOME/.zshrc", "BUN_INSTALL")
+        self.assert_contains("IDE forwarding: code", "$HOME/.zshrc", "distrobox-host-exec code")
+        self.assert_contains("IDE forwarding: antigravity/agy", "$HOME/.zshrc", "distrobox-host-exec antigravity")
 
     def verify_work_eam(self) -> None:
         console.print("  --- work-eam-specific assertions ---")
@@ -147,6 +151,8 @@ class ContainerTest:
         self.assert_exec("terraform installed", "command -v terraform")
         self.assert_not_contains("no invoicetron alias", "$HOME/.zshrc", "invoicetron")
         self.assert_not_contains("no OP_BIOMETRIC", "$HOME/.zshrc", "OP_BIOMETRIC_UNLOCK_ENABLED")
+        self.assert_contains("IDE forwarding: code", "$HOME/.zshrc", "distrobox-host-exec code")
+        self.assert_contains("IDE forwarding: antigravity/agy", "$HOME/.zshrc", "distrobox-host-exec antigravity")
 
     def verify_sandbox(self) -> None:
         console.print("  --- sandbox-specific assertions ---")
@@ -157,6 +163,7 @@ class ContainerTest:
         self.assert_not_contains("no 1Password socket", "$HOME/.zshrc", "1password/agent.sock")
         self.assert_not_contains("no OTEL env vars", "$HOME/.zshrc", "OTEL_METRICS_EXPORTER")
         self.assert_not_contains("no invoicetron alias", "$HOME/.zshrc", "invoicetron")
+        self.assert_not_contains("no IDE forwarding", "$HOME/.zshrc", "distrobox-host-exec code")
 
 
 def test_container(
