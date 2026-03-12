@@ -149,6 +149,7 @@ class ContainerTest:
         self.assert_exec("aws CLI installed", "command -v aws")
         self.assert_exec("kubectl installed", "command -v kubectl")
         self.assert_exec("terraform installed", "command -v terraform")
+        self.assert_contains("OTEL env vars", "$HOME/.zshrc", "OTEL_METRICS_EXPORTER")
         self.assert_not_contains("no invoicetron alias", "$HOME/.zshrc", "invoicetron")
         self.assert_not_contains("no OP_BIOMETRIC", "$HOME/.zshrc", "OP_BIOMETRIC_UNLOCK_ENABLED")
         self.assert_contains("IDE forwarding: code", "$HOME/.zshrc", "distrobox-host-exec code")

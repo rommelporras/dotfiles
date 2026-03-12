@@ -134,7 +134,7 @@ if [ "$IS_AURORA" = true ] && ! command -v node &>/dev/null; then
     brew link --force --overwrite node@24
 fi
 
-# Claude Code (WSL and Distrobox — Aurora has it via ujust bbrew)
+# Claude Code (WSL and Distrobox — Aurora installs via: brew install --cask claude-code)
 {{ if ne .context "sandbox" -}}
 if [ "$IS_AURORA" = false ] && ! command -v claude &>/dev/null; then
     echo "Installing Claude Code..."
@@ -157,9 +157,18 @@ fi
 
 # ─── Environment-specific tools ──────────────────────────────────────
 
-{{ if or (eq .platform "wsl") (eq .platform "distrobox") -}}
-# NVM (WSL and Distrobox — provides Node.js for Claude Code plugins)
+{{ if eq .platform "wsl" -}}
+# NVM (WSL — provides Node.js for Claude Code plugins)
 if [ ! -d "$HOME/.nvm" ]; then
+    echo "Installing nvm..."
+    curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash
+fi
+{{ end -}}
+
+{{ if eq .platform "distrobox" -}}
+# NVM (Distrobox — install to ~/.config/nvm to match zshrc NVM_DIR setting)
+export NVM_DIR="$HOME/.config/nvm"
+if [ ! -d "$NVM_DIR" ]; then
     echo "Installing nvm..."
     curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash
 fi
