@@ -6,3 +6,7 @@ dependencies = ["rich>=13.0"]
 
 [dependency-groups]
 dev = ["pytest>=8.0"]
+
+[tool.pytest.ini_options]
+testpaths = ["scripts"]
+addopts = "--ignore=scripts/test_distrobox_integration.py"
