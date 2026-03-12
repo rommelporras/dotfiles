@@ -42,6 +42,9 @@ id_*
 __pycache__/
 *.pyc
 
+# dotctl build output
+/dotctl
+
 # OS and editor
 .DS_Store
 Thumbs.db

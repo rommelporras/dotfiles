@@ -1,0 +1,10 @@
+[Unit]
+Description=Run dotctl collect every 10 minutes
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=10min
+RandomizedDelaySec=30
+
+[Install]
+WantedBy=timers.target

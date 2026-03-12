@@ -140,6 +140,39 @@ is blanket-ignored in `.chezmoiignore` so chezmoi never touches it.
 Plugin and MCP setup is handled by `setup-creds` (distrobox) or manual CLI
 commands (Aurora/WSL) — see bootstrap post-install instructions.
 
+## dotctl (Go CLI)
+
+Go CLI tool living at repo root (`cmd/`, `internal/`, `go.mod`). chezmoi only
+sees `home/` via `.chezmoiroot` — Go files are invisible to it.
+
+### Architecture
+
+Single binary, three modes:
+- `dotctl collect` — gather status, push to OTel Collector via OTLP gRPC
+- `dotctl status` — query Prometheus + Loki, render terminal tables
+- `dotctl status --live` — gather + display directly (no cluster dependency)
+
+### Key Packages
+
+- `internal/collector/` — gathers chezmoi status, tool inventory, credentials
+- `internal/push/` — OTLP gRPC push to OTel Collector
+- `internal/query/` — Prometheus + Loki HTTP API queries
+- `internal/display/` — terminal table rendering with lipgloss
+
+### Conventions
+
+- TDD: write failing test first, then implement
+- Shell out to `chezmoi` and `distrobox` CLIs — don't reimplement them
+- Interfaces for external commands to enable test mocking
+- `go vet` must pass before every commit
+
+### Commands
+
+- `make build` — compile dotctl binary
+- `make test` — run Go tests
+- `make lint` — go vet
+- `make install` — copy dotctl to ~/.local/bin/
+
 ## Rules
 
 - **NEVER commit secrets** — no API keys, tokens, passwords, SSH keys, cloud credentials.
