@@ -11,6 +11,8 @@
 credentials
 credentials.*
 secrets.*
+!*.go
+!*.md
 *.age
 token
 token.*
