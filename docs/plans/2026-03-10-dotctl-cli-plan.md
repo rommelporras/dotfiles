@@ -8,9 +8,13 @@
 
 **Tech Stack:** Go, cobra (CLI), lipgloss (terminal UI), OTel SDK (push), BurntSushi/toml (config), stdlib net/http (queries)
 
-**Design doc:** `docs/plans/2026-03-10-dotctl-cli-design.md` in the dotfiles repo
+**Design doc:** `docs/plans/2026-03-10-dotctl-cli-design.md`
 
-**Repository:** `github.com/rommelporras/dotctl` (new repo — create before starting)
+**Infra review:** `docs/plans/2026-03-12-dotctl-homelab-infra-review.md`
+
+**Repository:** Monorepo — lives in the dotfiles repo (`~/personal/dotfiles/`).
+Go code at repo root (`cmd/`, `internal/`, `go.mod`). chezmoi only sees `home/`
+via `.chezmoiroot`, so Go files are invisible to it.
 
 ---
 
@@ -23,20 +27,14 @@
 - Create: `CLAUDE.md`
 - Create: `.gitignore`
 
-**Step 1: Create the GitHub repo and clone it**
+**Step 1: Initialize Go module in the dotfiles repo root**
 
 ```bash
-gh repo create rommelporras/dotctl --private --clone
-cd dotctl
+cd ~/personal/dotfiles
+go mod init github.com/rommelporras/dotfiles
 ```
 
-**Step 2: Initialize Go module**
-
-```bash
-go mod init github.com/rommelporras/dotctl
-```
-
-**Step 3: Write minimal main.go**
+**Step 2: Write minimal main.go**
 
 ```go
 // cmd/dotctl/main.go
@@ -49,7 +47,7 @@ func main() {
 }
 ```
 
-**Step 4: Write Makefile**
+**Step 3: Write Makefile**
 
 ```makefile
 BINARY := dotctl
@@ -74,67 +72,64 @@ clean:
 	rm -f $(BINARY)
 ```
 
-**Step 5: Write CLAUDE.md**
+**Step 4: Update CLAUDE.md with dotctl section**
+
+Add a `## dotctl` section to the existing `CLAUDE.md` in the repo root:
 
 ```markdown
-# CLAUDE.md
+## dotctl (Go CLI)
 
-## Project Overview
+Go CLI tool living at repo root (`cmd/`, `internal/`, `go.mod`). chezmoi only
+sees `home/` via `.chezmoiroot` — Go files are invisible to it.
 
-dotctl is a CLI tool for observing chezmoi-managed dotfiles across Aurora DX,
-Distrobox containers, and (future) WSL2. Collects drift, tool inventory, and
-credential status. Pushes metrics to an existing OTel Collector → Prometheus/Loki
-pipeline. Displays a terminal dashboard.
-
-## Architecture
+### Architecture
 
 Single binary, three modes:
 - `dotctl collect` — gather status, push to OTel Collector via OTLP gRPC
 - `dotctl status` — query Prometheus + Loki, render terminal tables
 - `dotctl status --live` — gather + display directly (no cluster dependency)
 
-## Key Packages
+### Key Packages
 
 - `internal/collector/` — gathers chezmoi status, tool inventory, credentials
 - `internal/push/` — OTLP gRPC push to OTel Collector
 - `internal/query/` — Prometheus + Loki HTTP API queries
 - `internal/display/` — terminal table rendering with lipgloss
 
-## Conventions
+### Conventions
 
 - TDD: write failing test first, then implement
 - Shell out to `chezmoi` and `distrobox` CLIs — don't reimplement them
 - Interfaces for external commands to enable test mocking
 - `go vet` must pass before every commit
-- Conventional commits: feat/fix/refactor/test/chore
 
-## Commands
+### Commands
 
-- `make build` — compile binary
-- `make test` — run all tests
+- `make build` — compile dotctl binary
+- `make test` — run Go tests
 - `make lint` — go vet
-- `make install` — copy to ~/.local/bin/
+- `make install` — copy dotctl to ~/.local/bin/
 ```
 
-**Step 6: Write .gitignore**
+**Step 5: Add dotctl to .gitignore**
+
+Append to the existing `.gitignore`:
 
 ```
-dotctl
-*.exe
-.vscode/
-.idea/
+# dotctl build output
+/dotctl
 ```
 
-**Step 7: Verify build works**
+**Step 6: Verify build works**
 
 Run: `make build && ./dotctl`
 Expected: prints `dotctl`
 
-**Step 8: Commit**
+**Step 7: Commit**
 
 ```bash
-git add -A
-git commit -m "chore: scaffold project structure"
+git add cmd/ go.mod Makefile .gitignore CLAUDE.md
+git commit -m "chore: scaffold dotctl Go project in monorepo"
 ```
 
 ---
@@ -456,7 +451,7 @@ package collector
 import (
 	"testing"
 
-	"github.com/rommelporras/dotctl/internal/model"
+	"github.com/rommelporras/dotfiles/internal/model"
 )
 
 func TestParseChezmoiStatus(t *testing.T) {
@@ -530,7 +525,7 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/rommelporras/dotctl/internal/model"
+	"github.com/rommelporras/dotfiles/internal/model"
 )
 
 // CommandRunner abstracts exec.Command for testing.
@@ -817,7 +812,7 @@ package collector
 import (
 	"testing"
 
-	"github.com/rommelporras/dotctl/internal/model"
+	"github.com/rommelporras/dotfiles/internal/model"
 )
 
 func TestParseDistroboxList(t *testing.T) {
@@ -874,7 +869,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/rommelporras/dotctl/internal/model"
+	"github.com/rommelporras/dotfiles/internal/model"
 )
 
 const containerTimeout = 30 * time.Second
@@ -1008,7 +1003,7 @@ Expected: FAIL
 package collector
 
 import (
-	"github.com/rommelporras/dotctl/internal/model"
+	"github.com/rommelporras/dotfiles/internal/model"
 )
 
 // CollectLocal gathers state from the local machine.
@@ -1182,7 +1177,7 @@ package push
 import (
 	"testing"
 
-	"github.com/rommelporras/dotctl/internal/model"
+	"github.com/rommelporras/dotfiles/internal/model"
 )
 
 func TestBuildMetricAttributes(t *testing.T) {
@@ -1242,7 +1237,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	sdkresource "go.opentelemetry.io/otel/sdk/resource"
 
-	"github.com/rommelporras/dotctl/internal/model"
+	"github.com/rommelporras/dotfiles/internal/model"
 )
 
 // MetricSet is the intermediate representation before pushing.
@@ -1722,7 +1717,7 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/rommelporras/dotctl/internal/model"
+	"github.com/rommelporras/dotfiles/internal/model"
 )
 
 // LokiClient queries the Loki HTTP API.
@@ -1843,7 +1838,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/rommelporras/dotctl/internal/model"
+	"github.com/rommelporras/dotfiles/internal/model"
 )
 
 func TestRenderMachinesTable(t *testing.T) {
@@ -1893,8 +1888,8 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 
-	"github.com/rommelporras/dotctl/internal/collector"
-	"github.com/rommelporras/dotctl/internal/model"
+	"github.com/rommelporras/dotfiles/internal/collector"
+	"github.com/rommelporras/dotfiles/internal/model"
 )
 
 var (
@@ -2053,11 +2048,11 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/rommelporras/dotctl/internal/collector"
-	"github.com/rommelporras/dotctl/internal/config"
-	"github.com/rommelporras/dotctl/internal/display"
-	"github.com/rommelporras/dotctl/internal/push"
-	"github.com/rommelporras/dotctl/internal/query"
+	"github.com/rommelporras/dotfiles/internal/collector"
+	"github.com/rommelporras/dotfiles/internal/config"
+	"github.com/rommelporras/dotfiles/internal/display"
+	"github.com/rommelporras/dotfiles/internal/push"
+	"github.com/rommelporras/dotfiles/internal/query"
 )
 
 func main() {
@@ -2242,7 +2237,7 @@ func filterByHostname(machines []model.MachineState, name string) []model.Machin
 }
 ```
 
-Note: Add `"github.com/rommelporras/dotctl/internal/model"` to imports.
+Note: Add `"github.com/rommelporras/dotfiles/internal/model"` to imports.
 The exact imports will be adjusted during implementation based on the
 final API of each package.
 

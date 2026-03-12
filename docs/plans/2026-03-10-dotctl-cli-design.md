@@ -97,7 +97,7 @@ One log entry per machine per collection:
 
 ### Storage impact
 
-- Prometheus: ~17KB/day (88 series × 1 sample/15s scrape)
+- Prometheus: ~17KB/day (88 series × 1 sample/60s scrape via ServiceMonitor)
 - Loki: <1MB/day (6 machines × 144 entries/day × ~1KB each)
 - Both within existing PVCs (50Gi Prometheus, 10Gi Loki) with 90-day auto-retention
 
@@ -133,7 +133,8 @@ dotctl collect
 ## Project Structure
 
 ```
-dotctl/                          # New repo: github.com/rommelporras/dotctl
+dotfiles/                        # Monorepo — Go code at repo root alongside chezmoi
+├── home/                        # chezmoi source dir (unchanged, via .chezmoiroot)
 ├── cmd/dotctl/main.go           # CLI entrypoint
 ├── internal/
 │   ├── collector/
@@ -171,7 +172,7 @@ dotctl/                          # New repo: github.com/rommelporras/dotctl
 ```toml
 otel_endpoint = "10.10.30.22:4317"
 prometheus_url = "https://prometheus.k8s.rommelporras.com"
-loki_url = "https://loki.k8s.rommelporras.com"
+loki_url = "https://loki.k8s.rommelporras.com"  # requires Loki HTTPRoute (see infra review)
 hostname = "aurora-dx"
 ```
 
@@ -235,8 +236,9 @@ logs → Loki. No new deployments, services, or storage.
 
 4. **PrometheusRules (optional)** — alert definitions:
    - `DotctlCollectionStale` — no collection from a machine in >30 minutes
+     (uses `absent_over_time(35m)` to handle OTel Collector restarts)
    - `DotctlDriftDetected` — `dotctl_drift_total > 0` for >1 hour
-   - Route to Discord #status (warning severity)
+   - Route to Discord #apps catch-all (warning severity)
 
 5. **Loki access** — dotctl CLI queries Loki via HTTP API at
    `https://loki.k8s.rommelporras.com`. Currently Loki is internal-only.
