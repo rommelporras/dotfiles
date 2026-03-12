@@ -19,9 +19,9 @@ Chosen by the user at `chezmoi init`:
 
 | Context | Platform | Use case |
 |---|---|---|
-| `personal` | aurora | Personal laptop host — launches Distrobox containers |
+| `personal` | aurora, wsl | Personal laptop host (aurora) or work laptop personal WSL (wsl) |
 | `gaming` | wsl | Gaming desktop — personal projects |
-| `work-eam` | wsl or distrobox | EAM work projects |
+| `work-eam` | wsl or distrobox | EAM work projects — work-isolated WSL or dev container |
 | `work-<name>` | distrobox | Any other work context |
 | `personal-<project>` | distrobox | Project-scoped dev (Bun, Playwright, native op) |
 | `sandbox` | distrobox | Clean experiment space, no credentials |
@@ -39,6 +39,7 @@ Chosen by the user at `chezmoi init`:
 | op CLI (native) | — | ✓ | — | — | — |
 | bun | — | ✓ | — | — | — |
 | atuin | ✓ | ✓ | ✓ | ✓ | — |
+| OTel telemetry | ✓ | ✓ | ✓ | ✓ | — |
 | Claude Code | ✓ | ✓ | ✓ | ✓ | — |
 | setup-creds | ✓ | ✓ | ✓ | — | — |
 

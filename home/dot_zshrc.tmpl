@@ -176,7 +176,9 @@ alias tmp='cd ~/eam/tmp'
 {{ if or (eq .context "personal") (eq .context "gaming") (hasPrefix "personal-" .context) -}}
 # ─── Personal context ────────────────────────────────────────────────
 alias personal='cd ~/personal'
+{{ end -}}
 
+{{ if or (eq .context "personal") (eq .context "gaming") (hasPrefix "personal-" .context) (hasPrefix "work-" .context) -}}
 # Claude Code Telemetry → Homelab K8s OTel Collector
 export CLAUDE_CODE_ENABLE_TELEMETRY=1
 export OTEL_METRICS_EXPORTER=otlp

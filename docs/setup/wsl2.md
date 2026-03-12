@@ -1,5 +1,31 @@
 # WSL2 Setup
 
+**Work laptop uses two separate WSL2 Ubuntu instances** — one personal, one work-isolated.
+Gaming desktop uses one instance (gaming context).
+
+| Instance | Context | What it gets |
+|---|---|---|
+| Ubuntu (personal) | `personal` | Personal tools, homelab access, VAULT_ADDR |
+| Ubuntu-Work | `work-eam` | Terraform, AWS CLI, kubectl, work aliases, OTel |
+
+Both share the same 1Password SSH agent bridge (npiperelay) and the same Atuin server
+but with different accounts (`personal` vs `work-eam`).
+
+## 0. Work laptop — creating the second WSL2 instance
+
+If you need a work-isolated WSL2 instance alongside an existing personal one:
+
+```powershell
+# In PowerShell on Windows — create a fresh Ubuntu instance named Ubuntu-Work
+wsl --install --distribution Ubuntu --name Ubuntu-Work
+```
+
+> If `--name` isn't supported on your Windows version, install a second Ubuntu
+> version from Microsoft Store (e.g. "Ubuntu 24.04 LTS") — it creates a separate instance.
+
+Then continue with the steps below inside the new instance. Use context `work-eam`
+when chezmoi prompts. For the existing personal Ubuntu, use context `personal`.
+
 ## 1. Platform Prerequisites
 
 1. Install **1Password for Windows** (desktop app, not Microsoft Store)

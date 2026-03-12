@@ -72,7 +72,8 @@ Two variables: **platform** (auto-detected) and **context** (chosen at `chezmoi 
 |---|---|---|
 | `aurora` | `personal` | Personal laptop host |
 | `wsl` | `gaming` | Gaming desktop |
-| `wsl` | `work-eam` | Work laptop |
+| `wsl` | `personal` | Work laptop — personal WSL instance |
+| `wsl` | `work-eam` | Work laptop — work-isolated WSL instance |
 | `distrobox` | `personal` | Personal dev container |
 | `distrobox` | `personal-<project>` | Project-scoped (Bun, Playwright, native op) |
 | `distrobox` | `work-<name>` | Work dev container |

@@ -184,8 +184,8 @@ fi
 {{ end -}}
 
 {{ if hasPrefix "work-" .context -}}
-# Terraform (work contexts)
-if ! command -v terraform &>/dev/null && [ "$IS_DISTROBOX" = true ]; then
+# Terraform (work contexts — distrobox and WSL)
+if ! command -v terraform &>/dev/null && { [ "$IS_DISTROBOX" = true ] || [ "$IS_WSL" = true ]; }; then
     echo "Installing terraform..."
     sudo apt-get install -y -qq gnupg software-properties-common
     curl -fsSL https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
@@ -193,8 +193,8 @@ if ! command -v terraform &>/dev/null && [ "$IS_DISTROBOX" = true ]; then
     sudo apt-get update -qq && sudo apt-get install -y -qq terraform
 fi
 
-# AWS CLI v2 (work contexts)
-if ! command -v aws &>/dev/null && [ "$IS_DISTROBOX" = true ]; then
+# AWS CLI v2 (work contexts — distrobox and WSL)
+if ! command -v aws &>/dev/null && { [ "$IS_DISTROBOX" = true ] || [ "$IS_WSL" = true ]; }; then
     echo "Installing AWS CLI v2..."
     curl -fsSL "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o /tmp/awscliv2.zip
     unzip -q /tmp/awscliv2.zip -d /tmp
@@ -203,8 +203,8 @@ if ! command -v aws &>/dev/null && [ "$IS_DISTROBOX" = true ]; then
 fi
 {{ end -}}
 
-{{ if and (or (eq .context "personal") (hasPrefix "work-" .context)) (eq .platform "distrobox") -}}
-# kubectl (personal and work contexts — Aurora installs via brew)
+{{ if and (or (eq .context "personal") (hasPrefix "work-" .context)) (or (eq .platform "distrobox") (eq .platform "wsl")) -}}
+# kubectl (personal distrobox, work distrobox + WSL — Aurora installs via brew)
 if ! command -v kubectl &>/dev/null; then
     echo "Installing kubectl..."
     KUBECTL_VERSION=$(curl -fsSL https://dl.k8s.io/release/stable.txt)
