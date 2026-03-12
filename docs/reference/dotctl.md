@@ -3,7 +3,7 @@
 ## Installation
 
 ```bash
-cd ~/personal/dotfiles/dotctl
+cd ~/personal/dotfiles
 make install          # copies binary to ~/.local/bin/dotctl
 make install-systemd  # installs + enables systemd timer (10-minute collection)
 ```
