@@ -26,17 +26,26 @@ dotfiles/
 │   ├── dot_local/bin/                   # User scripts (~/.local/bin/)
 │   │   └── executable_setup-creds.tmpl  # Credential + plugin seeding for distrobox
 │   └── dot_config/                      # ~/.config/ files
+├── dotctl/                              # Go CLI (module: github.com/rommelporras/dotfiles/dotctl)
+│   ├── cmd/dotctl/main.go               # cobra CLI wiring
+│   ├── internal/                        # collector, push, query, display, model, config
+│   ├── deploy/                          # systemd service + timer units
+│   ├── go.mod / go.sum
+│   └── Makefile                         # build, test, lint, install, install-systemd
 ├── scripts/                             # Setup automation (Python, invoke via uv run)
 │   ├── distrobox_setup.py               # Container creation + chezmoi bootstrap
 │   ├── distrobox_lib.py                 # Shared library for distrobox scripts
 │   ├── test_distrobox_integration.py    # E2E test: delete → create → bootstrap → verify → delete
 │   └── windows-git-setup.ps1            # Windows git setup for WSL
-├── docs/                                # Reference documentation
-│   └── distrobox-scripts.md             # Distrobox scripts parameter reference
+├── docs/
+│   ├── setup/                           # Per-platform setup guides (wsl2.md, aurora.md, distrobox.md)
+│   ├── reference/                       # CLI ref, environment model, credentials, distrobox-scripts
+│   └── architecture/                    # Design decisions (dotctl-design.md, infra.md)
 ├── containers/                          # Distrobox + Podman definitions
 │   ├── distrobox.ini                    # Container definitions (work-eam, personal, personal-fintrack, sandbox)
 │   └── Containerfile.ai-sandbox         # AI sandbox container (Ubuntu 24.04, Claude Code, Node.js, Python, uv)
 ├── bin/                                 # CLI tools (ai-sandbox)
+├── Makefile                             # Root delegator → $(MAKE) -C dotctl <target>
 └── hooks/                               # Git hooks (gitleaks)
 ```
 
@@ -74,7 +83,7 @@ native `op` CLI) apply via `hasPrefix .context "personal-"`.
 ### Distrobox chezmoi workflow
 
 `scripts/distrobox_setup.py` bootstraps containers with chezmoi (see
-[docs/distrobox-scripts.md](docs/distrobox-scripts.md) for full reference):
+[docs/reference/distrobox-scripts.md](docs/reference/distrobox-scripts.md) for full reference):
 1. Installs chezmoi inside the container (`~/bin/chezmoi`)
 2. Symlinks `~/.local/share/chezmoi` → host repo (uncommitted changes apply immediately)
 3. Writes chezmoi config (non-interactive when `--personal-email`/`--work-email` provided)
@@ -142,8 +151,8 @@ commands (Aurora/WSL) — see bootstrap post-install instructions.
 
 ## dotctl (Go CLI)
 
-Go CLI tool living at repo root (`cmd/`, `internal/`, `go.mod`). chezmoi only
-sees `home/` via `.chezmoiroot` — Go files are invisible to it.
+Go CLI tool living at `dotctl/` (module: `github.com/rommelporras/dotfiles/dotctl`).
+chezmoi only sees `home/` via `.chezmoiroot` — Go files are invisible to it.
 
 ### Architecture
 
@@ -154,10 +163,10 @@ Single binary, three modes:
 
 ### Key Packages
 
-- `internal/collector/` — gathers chezmoi status, tool inventory, credentials
-- `internal/push/` — OTLP gRPC push to OTel Collector
-- `internal/query/` — Prometheus + Loki HTTP API queries
-- `internal/display/` — terminal table rendering with lipgloss
+- `dotctl/internal/collector/` — gathers chezmoi status, tool inventory, credentials
+- `dotctl/internal/push/` — OTLP gRPC push to OTel Collector
+- `dotctl/internal/query/` — Prometheus + Loki HTTP API queries
+- `dotctl/internal/display/` — terminal table rendering with lipgloss
 
 ### Conventions
 
@@ -166,12 +175,13 @@ Single binary, three modes:
 - Interfaces for external commands to enable test mocking
 - `go vet` must pass before every commit
 
-### Commands
+### Commands (run from repo root — root Makefile delegates to dotctl/)
 
-- `make build` — compile dotctl binary
+- `make build` — compile dotctl binary (output: `dotctl/dotctl`)
 - `make test` — run Go tests
 - `make lint` — go vet
 - `make install` — copy dotctl to ~/.local/bin/
+- `make install-systemd` — install + enable systemd timer
 
 ## Rules
 
