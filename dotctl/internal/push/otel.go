@@ -18,7 +18,7 @@ import (
 
 	otelmetric "go.opentelemetry.io/otel/metric"
 
-	"github.com/rommelporras/dotfiles/internal/model"
+	"github.com/rommelporras/dotfiles/dotctl/internal/model"
 )
 
 // MetricSet is the intermediate representation before pushing.

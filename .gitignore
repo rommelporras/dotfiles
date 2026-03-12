@@ -43,7 +43,7 @@ __pycache__/
 *.pyc
 
 # dotctl build output
-/dotctl
+/dotctl/dotctl
 
 # OS and editor
 .DS_Store

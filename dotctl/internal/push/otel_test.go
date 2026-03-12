@@ -3,7 +3,7 @@ package push
 import (
 	"testing"
 
-	"github.com/rommelporras/dotfiles/internal/model"
+	"github.com/rommelporras/dotfiles/dotctl/internal/model"
 )
 
 func TestBuildMetrics(t *testing.T) {

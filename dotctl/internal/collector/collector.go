@@ -3,7 +3,7 @@ package collector
 import (
 	"strings"
 
-	"github.com/rommelporras/dotfiles/internal/model"
+	"github.com/rommelporras/dotfiles/dotctl/internal/model"
 )
 
 // CollectLocal gathers state from the local machine.

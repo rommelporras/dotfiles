@@ -7,12 +7,12 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/rommelporras/dotfiles/internal/collector"
-	"github.com/rommelporras/dotfiles/internal/config"
-	"github.com/rommelporras/dotfiles/internal/display"
-	"github.com/rommelporras/dotfiles/internal/model"
-	"github.com/rommelporras/dotfiles/internal/push"
-	"github.com/rommelporras/dotfiles/internal/query"
+	"github.com/rommelporras/dotfiles/dotctl/internal/collector"
+	"github.com/rommelporras/dotfiles/dotctl/internal/config"
+	"github.com/rommelporras/dotfiles/dotctl/internal/display"
+	"github.com/rommelporras/dotfiles/dotctl/internal/model"
+	"github.com/rommelporras/dotfiles/dotctl/internal/push"
+	"github.com/rommelporras/dotfiles/dotctl/internal/query"
 )
 
 func main() {

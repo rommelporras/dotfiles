@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/rommelporras/dotfiles/internal/model"
+	"github.com/rommelporras/dotfiles/dotctl/internal/model"
 )
 
 const containerTimeout = 30 * time.Second

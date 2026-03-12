@@ -6,8 +6,8 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 
-	"github.com/rommelporras/dotfiles/internal/collector"
-	"github.com/rommelporras/dotfiles/internal/model"
+	"github.com/rommelporras/dotfiles/dotctl/internal/collector"
+	"github.com/rommelporras/dotfiles/dotctl/internal/model"
 )
 
 var (

@@ -1,34 +1,22 @@
-BINARY := dotctl
-INSTALL_DIR := $(HOME)/.local/bin
-SYSTEMD_DIR := $(HOME)/.config/systemd/user
-
 .PHONY: build test lint install install-systemd uninstall-systemd clean
 
 build:
-	go build -o $(BINARY) ./cmd/dotctl/
+	$(MAKE) -C dotctl build
 
 test:
-	go test ./... -v
+	$(MAKE) -C dotctl test
 
 lint:
-	go vet ./...
+	$(MAKE) -C dotctl lint
 
-install: build
-	mkdir -p $(INSTALL_DIR)
-	cp $(BINARY) $(INSTALL_DIR)/$(BINARY)
+install:
+	$(MAKE) -C dotctl install
 
-install-systemd: install
-	mkdir -p $(SYSTEMD_DIR)
-	cp deploy/dotctl-collect.service $(SYSTEMD_DIR)/
-	cp deploy/dotctl-collect.timer $(SYSTEMD_DIR)/
-	systemctl --user daemon-reload
-	systemctl --user enable --now dotctl-collect.timer
-	@echo "Timer installed. Check: systemctl --user status dotctl-collect.timer"
+install-systemd:
+	$(MAKE) -C dotctl install-systemd
 
 uninstall-systemd:
-	systemctl --user disable --now dotctl-collect.timer || true
-	rm -f $(SYSTEMD_DIR)/dotctl-collect.service $(SYSTEMD_DIR)/dotctl-collect.timer
-	systemctl --user daemon-reload
+	$(MAKE) -C dotctl uninstall-systemd
 
 clean:
-	rm -f $(BINARY)
+	$(MAKE) -C dotctl clean

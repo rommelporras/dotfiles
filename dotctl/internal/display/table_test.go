@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/rommelporras/dotfiles/internal/model"
+	"github.com/rommelporras/dotfiles/dotctl/internal/model"
 )
 
 func TestRenderMachinesTable(t *testing.T) {

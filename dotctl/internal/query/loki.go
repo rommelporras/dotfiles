@@ -8,7 +8,7 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/rommelporras/dotfiles/internal/model"
+	"github.com/rommelporras/dotfiles/dotctl/internal/model"
 )
 
 // LokiClient queries the Loki HTTP API.

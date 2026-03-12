@@ -1,4 +1,4 @@
-module github.com/rommelporras/dotfiles
+module github.com/rommelporras/dotfiles/dotctl
 
 go 1.26.1
 
