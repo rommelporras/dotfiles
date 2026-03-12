@@ -48,3 +48,11 @@ setup-creds
 ```
 
 See [docs/reference/credentials.md](../reference/credentials.md).
+
+## dotctl collection timer
+
+To enable automatic metric collection from the Aurora host (runs every 10 minutes):
+```bash
+cd ~/personal/dotfiles
+make install-systemd
+```

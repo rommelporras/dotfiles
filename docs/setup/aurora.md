@@ -51,22 +51,38 @@
 6. Open 1Password → sign in → Settings → Developer → enable **SSH Agent**
 7. Settings → Security → enable **Unlock using system authentication** (uses Aurora user password or fingerprint)
 8. SSH agent socket is at `~/.1password/agent.sock` (lowercase p).
-   After chezmoi apply, `.zshrc` sets `SSH_AUTH_SOCK` automatically.
-
-9. Install Claude Code and uv (Python project manager — needed for distrobox scripts):
+   `.zshrc` sets `SSH_AUTH_SOCK` automatically — but only after chezmoi applies it.
+   For the next step, export it manually in the current session:
    ```bash
-   brew install claude-code uv
+   export SSH_AUTH_SOCK="$HOME/.1password/agent.sock"
+   ssh-add -l   # should list your keys — if empty, check 1Password SSH Agent settings
    ```
+
+9. Install CLI tools needed for dotfiles:
+   ```bash
+   brew install go uv
+   brew install --cask claude-code
+   ```
+   - `go` — required to build `dotctl` (`make install` in step 3)
+   - `uv` — Python project manager, required for distrobox setup scripts
+   - `claude-code` — Claude Code cask (installs `claude` binary)
 
 ## 2. Install chezmoi and apply dotfiles
 
 ```bash
-# Clone the repo first (chezmoi is already installed via brew)
+# Clone the repo (chezmoi already installed via brew in step 3)
 mkdir -p ~/personal
 git clone git@github.com:rommelporras/dotfiles.git ~/personal/dotfiles
 
 chezmoi init --apply ~/personal/dotfiles
 ```
+
+chezmoi will prompt for:
+- **context** — `personal` for Aurora host
+- **personal email** — your git email
+- **has homelab creds** — `y` if you use kubectl/Vault
+- **Atuin sync address** — `https://atuin.k8s.rommelporras.com` (or blank to skip)
+- **Atuin account** — `personal` (or `none` to skip)
 
 After install:
 ```bash
