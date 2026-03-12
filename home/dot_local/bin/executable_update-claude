@@ -1,0 +1,18 @@
+#!/bin/bash
+# Sync claude-config from GitHub (pull latest CLAUDE.md, settings, hooks, skills, agents).
+# Symlinks in ~/.claude/ already point to this repo — no re-linking needed after pull.
+
+REPO="$HOME/personal/claude-config"
+
+if [ -z "${DISTROBOX_ENTER_PATH:-}" ]; then
+    # Non-distrobox: pull the local clone
+    if [ ! -d "$REPO" ]; then
+        echo "claude-config not found at $REPO — run 'chezmoi apply' first to clone it"
+        exit 1
+    fi
+    git -C "$REPO" pull --ff-only
+else
+    # Distrobox: no local clone — config comes from host repo via symlink
+    echo "Distrobox: claude-config is inherited from the Aurora host at $REPO"
+    echo "Pull on the Aurora host instead: git -C $REPO pull"
+fi

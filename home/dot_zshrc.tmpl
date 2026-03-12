@@ -103,6 +103,15 @@ fi
 {{ end -}}
 {{ end -}}
 
+# ─── Auto-sync claude-config on shell startup ────────────────────────
+# Distrobox: not needed — containers use host repo via absolute symlink.
+# Aurora/WSL: pull in background using HTTPS (public repo, no SSH agent needed).
+{{ if and (ne .context "sandbox") (ne .platform "distrobox") -}}
+if [ -d "$HOME/personal/claude-config" ]; then
+    (GIT_TERMINAL_PROMPT=0 timeout 5 git -C "$HOME/personal/claude-config" pull --ff-only --quiet 2>/dev/null) &
+fi
+{{ end -}}
+
 # ─── Source bling.sh on Aurora (eza, bat, direnv, zoxide, mise, ugrep) ──
 {{ if eq .platform "aurora" -}}
 test -f /usr/share/ublue-os/bling/bling.sh && source /usr/share/ublue-os/bling/bling.sh
