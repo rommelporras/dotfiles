@@ -124,3 +124,22 @@ See [docs/reference/distrobox-scripts.md](../reference/distrobox-scripts.md) for
 ## 5. Set up credentials
 
 See [docs/reference/credentials.md](../reference/credentials.md).
+
+## 6. Keeping in sync
+
+After pushing changes from any machine:
+
+```bash
+cd ~/personal/dotfiles
+git pull
+chezmoi apply     # apply to Aurora host
+exec zsh          # reload shell if .zshrc changed
+```
+
+If the bootstrap script changed (new tools added), re-run it:
+```bash
+chezmoi state delete-bucket --bucket=scriptState
+chezmoi apply
+```
+
+Then apply inside each Distrobox container — see [docs/setup/distrobox.md](distrobox.md).

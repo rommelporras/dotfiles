@@ -29,7 +29,14 @@ sudo -v
 sh -c "$(curl -fsLS get.chezmoi.io)" -- init --apply rommelporras
 ```
 
-chezmoi will ask: context, personal email, work email, work credentials, homelab credentials, Atuin URL, Atuin account.
+chezmoi will ask (answers vary by context):
+- **context** — `gaming` for personal gaming desktop, `work-eam` for work laptop
+- **personal email** — your git email (always prompted, even for work contexts on WSL)
+- **work email** — only if context is `work-*`
+- **work credentials** — only if context is `work-*`
+- **homelab credentials** — only if context is `gaming` or `personal`
+- **Atuin sync address** — `https://atuin.k8s.rommelporras.com` (or blank to skip)
+- **Atuin account** — `personal` or `work-eam` (or `none` to skip)
 
 After install:
 ```bash
@@ -49,3 +56,24 @@ Install JetBrainsMono Nerd Font manually on Windows:
 ## 4. Set up credentials
 
 See [docs/reference/credentials.md](../reference/credentials.md).
+
+## 5. Keeping in sync
+
+When dotfiles are updated on Aurora (or from any machine), pull and apply on WSL2:
+
+```bash
+chezmoi update    # git pull from GitHub + apply changes
+exec zsh          # reload shell if .zshrc changed
+```
+
+`chezmoi update` is equivalent to:
+```bash
+cd ~/.local/share/chezmoi && git pull
+chezmoi apply
+```
+
+If the bootstrap script changed (new tools added), re-run it:
+```bash
+chezmoi state delete-bucket --bucket=scriptState
+chezmoi apply
+```

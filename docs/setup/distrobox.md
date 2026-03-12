@@ -27,12 +27,30 @@ uv run python scripts/distrobox_setup.py sandbox
 
 See [docs/reference/distrobox-scripts.md](../reference/distrobox-scripts.md) for full parameter reference.
 
-## Day-to-day
+## Keeping in sync
 
+Container chezmoi source is symlinked to the host repo (`~/personal/dotfiles`).
+When the host pulls new changes, containers automatically see them — no separate
+git pull needed inside containers.
+
+**On the Aurora host:**
 ```bash
-distrobox enter personal        # enter a container
-~/bin/chezmoi apply -v          # update dotfiles inside container
-exec zsh                        # reload shell
+cd ~/personal/dotfiles
+git pull
+chezmoi apply     # update Aurora host dotfiles
+exec zsh
+```
+
+**Inside each container (after host pulls):**
+```bash
+~/bin/chezmoi apply -v    # pick up changes from the now-updated host repo
+exec zsh
+```
+
+If the bootstrap script changed (new tools added), re-run it inside the container:
+```bash
+~/bin/chezmoi state delete-bucket --bucket=scriptState
+~/bin/chezmoi apply
 ```
 
 ## IDE forwarding
