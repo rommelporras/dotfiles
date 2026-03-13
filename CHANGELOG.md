@@ -7,7 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [1.0.0] - 2026-03-12
+## [0.1.0] - 2026-03-13
+
+First public release. Aurora DX and Distrobox verified from scratch (nuke + re-bootstrap).
+WSL2 templates are functional but untested from a clean machine — full platform
+verification planned for v1.0.0.
 
 ### Added
 
@@ -42,7 +46,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `~/.config/nvm` on Distrobox)
 - JetBrainsMono Nerd Font v3.3.0 for Distrobox containers
 - Claude Code install for non-Aurora, non-sandbox environments
-- Gitleaks pre-commit hook auto-install via symlink
+- Gitleaks pre-commit hook auto-install via symlink (uses `chezmoi.workingTree`
+  to resolve repo root correctly with `.chezmoiroot`)
 
 #### Distrobox Automation
 
@@ -111,10 +116,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Concise README with quick-start links and environment matrix
 - Windows git setup script for 1Password SSH agent (`scripts/windows-git-setup.ps1`)
 
+### Verified Platforms
+
+- **Aurora DX** — full nuke + re-bootstrap from scratch, all checks pass
+- **Distrobox** — 85/85 assertions pass across all 4 containers (nuked homes,
+  re-created, bootstrapped, verified)
+- **WSL2** — templates present but untested from a clean machine
+
 ### Known Issues
 
-- Bootstrap `chsh` check compares `$SHELL` at runtime, causing repeated sudo
-  prompts on re-apply (doesn't update until next login)
+- Bootstrap `chsh` check (WSL/Distrobox only) compares `$SHELL` at runtime,
+  causing repeated sudo prompts on re-apply (doesn't update until next login)
 - glab version detection parses redirect URL — fragile if GitLab changes format
 - Starship install has no version pinning
 - `ubuntu:24.04` image tag in `distrobox.ini` is mutable (no pinned digest)
