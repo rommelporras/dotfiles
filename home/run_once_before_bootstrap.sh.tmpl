@@ -264,8 +264,8 @@ chmod 700 ~/.ssh
 # Install from hooks/ into .git/hooks/ so secret scanning runs on every commit.
 # Distrobox containers skip this — they don't commit to the dotfiles repo.
 {{ if ne .platform "distrobox" -}}
-_HOOK_SRC="{{ .chezmoi.sourceDir }}/hooks/pre-commit"
-_HOOK_DST="{{ .chezmoi.sourceDir }}/.git/hooks/pre-commit"
+_HOOK_SRC="{{ .chezmoi.workingTree }}/hooks/pre-commit"
+_HOOK_DST="{{ .chezmoi.workingTree }}/.git/hooks/pre-commit"
 if [ -f "$_HOOK_SRC" ] && [ -d "$(dirname "$_HOOK_DST")" ]; then
     ln -sfn "$_HOOK_SRC" "$_HOOK_DST"
     echo "Installed gitleaks pre-commit hook"
