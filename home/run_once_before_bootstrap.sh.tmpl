@@ -134,6 +134,12 @@ if [ "$IS_AURORA" = true ] && ! command -v node &>/dev/null; then
     brew link --force --overwrite node@24
 fi
 
+# Gitleaks (Aurora — enables pre-commit secret scanning for dotfiles repo)
+if [ "$IS_AURORA" = true ] && ! command -v gitleaks &>/dev/null; then
+    echo "Installing gitleaks..."
+    brew install gitleaks
+fi
+
 # Claude Code (WSL and Distrobox — Aurora installs via: brew install --cask claude-code)
 {{ if ne .context "sandbox" -}}
 if [ "$IS_AURORA" = false ] && ! command -v claude &>/dev/null; then
@@ -245,15 +251,26 @@ fi
 # ─── Credential directories ──────────────────────────────────────────
 
 {{ if .has_work_creds -}}
-mkdir -p ~/.aws ~/.kube
+mkdir -p ~/.aws
 {{ end -}}
-
-{{ if .has_homelab_creds -}}
+{{ if or .has_work_creds .has_homelab_creds -}}
 mkdir -p ~/.kube
 {{ end -}}
 
 mkdir -p ~/.ssh
 chmod 700 ~/.ssh
+
+# ─── Gitleaks pre-commit hook ─────────────────────────────────────────
+# Install from hooks/ into .git/hooks/ so secret scanning runs on every commit.
+# Distrobox containers skip this — they don't commit to the dotfiles repo.
+{{ if ne .platform "distrobox" -}}
+_HOOK_SRC="{{ .chezmoi.sourceDir }}/hooks/pre-commit"
+_HOOK_DST="{{ .chezmoi.sourceDir }}/.git/hooks/pre-commit"
+if [ -f "$_HOOK_SRC" ] && [ -d "$(dirname "$_HOOK_DST")" ]; then
+    ln -sfn "$_HOOK_SRC" "$_HOOK_DST"
+    echo "Installed gitleaks pre-commit hook"
+fi
+{{ end -}}
 
 # ─── Post-install instructions ───────────────────────────────────────
 

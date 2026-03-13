@@ -1,4 +1,4 @@
-.PHONY: build test lint install install-systemd uninstall-systemd clean
+.PHONY: build test lint install install-systemd uninstall-systemd clean setup-hooks
 
 build:
 	$(MAKE) -C dotctl build
@@ -20,3 +20,7 @@ uninstall-systemd:
 
 clean:
 	$(MAKE) -C dotctl clean
+
+setup-hooks:
+	ln -sfn $(CURDIR)/hooks/pre-commit $(CURDIR)/.git/hooks/pre-commit
+	@echo "Installed gitleaks pre-commit hook"
