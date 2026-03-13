@@ -24,8 +24,9 @@ dotfiles/
 │   ├── dot_gitconfig.tmpl               # Git config (conditional includes)
 │   ├── run_once_before_bootstrap.sh.tmpl # First-run setup (installs tools)
 │   ├── dot_local/bin/                   # User scripts (~/.local/bin/)
-│   │   └── executable_setup-creds.tmpl  # Credential + plugin seeding for distrobox
-│   └── dot_config/                      # ~/.config/ files
+│   │   ├── executable_setup-creds.tmpl  # Credential + plugin seeding for distrobox
+│   │   └── executable_update-claude     # Manual claude-config sync (git pull)
+│   └── dot_config/                      # ~/.config/ files (atuin, ghostty, git, k9s, starship.toml)
 ├── dotctl/                              # Go CLI (module: github.com/rommelporras/dotfiles/dotctl)
 │   ├── cmd/dotctl/main.go               # cobra CLI wiring
 │   ├── internal/                        # collector, push, query, display, model, config
@@ -40,7 +41,8 @@ dotfiles/
 ├── docs/
 │   ├── setup/                           # Per-platform setup guides (wsl2.md, aurora.md, distrobox.md)
 │   ├── reference/                       # CLI ref, environment model, credentials, distrobox-scripts
-│   └── architecture/                    # Design decisions (dotctl-design.md, infra.md)
+│   ├── architecture/                    # Design decisions (dotctl-design.md, infra.md)
+│   └── plans/                           # Implementation plans (ad-hoc design + plan docs)
 ├── containers/                          # Distrobox + Podman definitions
 │   ├── distrobox.ini                    # Container definitions (work-eam, personal, personal-fintrack, sandbox)
 │   └── Containerfile.ai-sandbox         # AI sandbox container (Ubuntu 24.04, Claude Code, Node.js, Python, uv)
@@ -134,6 +136,16 @@ chezmoi add ~/.config/some/config.toml
 
 # Update external dependencies (oh-my-zsh, plugins)
 chezmoi update
+
+# Install gitleaks pre-commit hook (run once after cloning)
+make setup-hooks
+
+# Bootstrap a distrobox container
+uv run python scripts/distrobox_setup.py personal --personal-email you@example.com
+uv run python scripts/distrobox_setup.py work-eam --work-email you@work.com
+
+# Run E2E integration tests (destroys + recreates all 4 containers)
+uv run python scripts/test_distrobox_integration.py --all
 ```
 
 ## Claude Code Config
@@ -182,6 +194,7 @@ Single binary, three modes:
 - `make lint` — go vet
 - `make install` — copy dotctl to ~/.local/bin/
 - `make install-systemd` — install + enable systemd timer
+- `make setup-hooks` — install gitleaks pre-commit hook (run once after cloning)
 
 ## Rules
 
