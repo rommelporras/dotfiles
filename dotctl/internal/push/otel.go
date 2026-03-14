@@ -30,6 +30,7 @@ type MetricSet struct {
 	DriftTotal     int64
 	ToolsInstalled map[string]int64
 	Credentials    map[string]int64
+	ClaudeLinks    map[string]int64
 	Timestamp      int64
 }
 
@@ -50,6 +51,11 @@ func BuildMetrics(state *model.MachineState) *MetricSet {
 		"atuin_sync":  boolToInt(state.AtuinSync == "synced"),
 	}
 
+	claudeLinks := make(map[string]int64, len(state.ClaudeLinks))
+	for item, status := range state.ClaudeLinks {
+		claudeLinks[item] = boolToInt(status == "ok")
+	}
+
 	return &MetricSet{
 		Hostname:       state.Hostname,
 		Platform:       state.Platform,
@@ -58,6 +64,7 @@ func BuildMetrics(state *model.MachineState) *MetricSet {
 		DriftTotal:     int64(len(state.DriftFiles)),
 		ToolsInstalled: tools,
 		Credentials:    creds,
+		ClaudeLinks:    claudeLinks,
 		Timestamp:      time.Now().Unix(),
 	}
 }
@@ -110,6 +117,7 @@ func Push(ctx context.Context, endpoint string, state *model.MachineState) error
 	driftGauge, _ := meter.Int64Gauge("dotctl_drift_total")
 	toolGauge, _ := meter.Int64Gauge("dotctl_tool_installed")
 	credGauge, _ := meter.Int64Gauge("dotctl_credential_status")
+	claudeGauge, _ := meter.Int64Gauge("dotctl_claude_link")
 	tsGauge, _ := meter.Int64Gauge("dotctl_collect_timestamp")
 
 	upGauge.Record(ctx, ms.Up, otelmetric.WithAttributes(hostAttr, platAttr, ctxAttr))
@@ -121,6 +129,9 @@ func Push(ctx context.Context, endpoint string, state *model.MachineState) error
 	}
 	for cred, val := range ms.Credentials {
 		credGauge.Record(ctx, val, otelmetric.WithAttributes(hostAttr, attribute.String("credential", cred)))
+	}
+	for item, val := range ms.ClaudeLinks {
+		claudeGauge.Record(ctx, val, otelmetric.WithAttributes(hostAttr, attribute.String("item", item)))
 	}
 
 	var rm metricdata.ResourceMetrics

@@ -23,6 +23,14 @@ func TestBuildMetrics(t *testing.T) {
 		SSHAgent:   "1password",
 		SetupCreds: "n/a",
 		AtuinSync:  "synced",
+		ClaudeLinks: map[string]string{
+			"CLAUDE.md":     "ok",
+			"settings.json": "ok",
+			"rules":         "ok",
+			"hooks":         "ok",
+			"skills":        "ok",
+			"agents":        "wrong",
+		},
 	}
 
 	ms := BuildMetrics(state)
@@ -47,6 +55,12 @@ func TestBuildMetrics(t *testing.T) {
 	}
 	if ms.Credentials["atuin_sync"] != 1 {
 		t.Errorf("atuin_sync should be 1, got %d", ms.Credentials["atuin_sync"])
+	}
+	if ms.ClaudeLinks["CLAUDE.md"] != 1 {
+		t.Errorf("claude CLAUDE.md should be 1, got %d", ms.ClaudeLinks["CLAUDE.md"])
+	}
+	if ms.ClaudeLinks["agents"] != 0 {
+		t.Errorf("claude agents should be 0 (wrong), got %d", ms.ClaudeLinks["agents"])
 	}
 	if ms.Hostname != "aurora-dx" {
 		t.Errorf("Hostname = %q", ms.Hostname)

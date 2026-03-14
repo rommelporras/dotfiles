@@ -40,6 +40,8 @@ func RenderAll(machines []model.MachineState, containers []model.ContainerInfo) 
 	sb.WriteString(RenderToolsGrid(machines))
 	sb.WriteString("\n")
 	sb.WriteString(RenderCredentials(machines))
+	sb.WriteString("\n")
+	sb.WriteString(RenderClaudeConfig(machines))
 	return sb.String()
 }
 
@@ -117,6 +119,33 @@ func RenderCredentials(machines []model.MachineState) string {
 		atuinStr := styleValue(m.AtuinSync, "synced", "")
 
 		sb.WriteString(" " + col(m.Hostname, 16) + " " + col(sshStr, 14) + " " + col(setupStr, 14) + " " + col(atuinStr, 14) + "\n")
+	}
+	return sb.String()
+}
+
+// RenderClaudeConfig renders the Claude Code config symlink status.
+func RenderClaudeConfig(machines []model.MachineState) string {
+	var sb strings.Builder
+	sb.WriteString(headerStyle.Render(" Claude Config"))
+	sb.WriteString("\n")
+
+	// Header row
+	sb.WriteString(" " + col("", 16))
+	for _, item := range collector.TrackedClaudeLinks {
+		sb.WriteString(col(item, 16))
+	}
+	sb.WriteString("\n")
+
+	for _, m := range machines {
+		if m.ClaudeLinks == nil {
+			continue
+		}
+		sb.WriteString(" " + col(m.Hostname, 16))
+		for _, item := range collector.TrackedClaudeLinks {
+			status := m.ClaudeLinks[item]
+			sb.WriteString(col(styleValue(status, "ok", ""), 16))
+		}
+		sb.WriteString("\n")
 	}
 	return sb.String()
 }

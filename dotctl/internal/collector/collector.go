@@ -1,6 +1,7 @@
 package collector
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/rommelporras/dotfiles/dotctl/internal/model"
@@ -17,6 +18,11 @@ func CollectLocal(runner CommandRunner, hostname, platform string) (*model.Machi
 		}
 	}
 
+	var claudeLinks map[string]string
+	if context != "sandbox" {
+		claudeLinks = DetectClaudeLinks()
+	}
+
 	state := &model.MachineState{
 		Hostname:     hostname,
 		Platform:     platform,
@@ -27,6 +33,7 @@ func CollectLocal(runner CommandRunner, hostname, platform string) (*model.Machi
 		SSHAgent:     DetectSSHAgent(),
 		SetupCreds:   DetectSetupCreds(),
 		AtuinSync:    DetectAtuinSync(),
+		ClaudeLinks:  claudeLinks,
 	}
 
 	if chezmoiErr != nil && drift == nil {
@@ -106,6 +113,29 @@ func collectFromContainer(name string) (*model.MachineState, error) {
 	atuinOut, _ := RunInContainer(name, "grep -q sync_address $HOME/.config/atuin/config.toml 2>/dev/null && printf synced || printf n/a")
 	atuinSync := strings.TrimSpace(atuinOut)
 
+	// Claude config symlinks (skip for sandbox context)
+	var claudeLinks map[string]string
+	if context != "sandbox" {
+		claudeLinks = make(map[string]string, len(TrackedClaudeLinks))
+		linkScript := ""
+		for _, item := range TrackedClaudeLinks {
+			// For each item: check symlink exists and points to claude-config
+			linkScript += fmt.Sprintf(
+				`if [ -L "$HOME/.claude/%s" ]; then target=$(readlink "$HOME/.claude/%s"); case "$target" in *claude-config*) printf 'ok\n';; *) printf 'wrong\n';; esac; elif [ -e "$HOME/.claude/%s" ]; then printf 'file\n'; else printf 'missing\n'; fi; `,
+				item, item, item,
+			)
+		}
+		linkOut, _ := RunInContainer(name, linkScript)
+		linkLines := strings.Split(strings.TrimSpace(linkOut), "\n")
+		for i, item := range TrackedClaudeLinks {
+			if i < len(linkLines) {
+				claudeLinks[item] = parseClaudeLinkStatus(linkLines[i])
+			} else {
+				claudeLinks[item] = "missing"
+			}
+		}
+	}
+
 	return &model.MachineState{
 		Hostname:     name,
 		Platform:     "distrobox",
@@ -116,5 +146,6 @@ func collectFromContainer(name string) (*model.MachineState, error) {
 		SSHAgent:     sshAgent,
 		SetupCreds:   setupCreds,
 		AtuinSync:    atuinSync,
+		ClaudeLinks:  claudeLinks,
 	}, nil
 }

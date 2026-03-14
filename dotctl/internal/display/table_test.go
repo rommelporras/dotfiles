@@ -100,3 +100,38 @@ func TestRenderCredentials(t *testing.T) {
 		t.Error("output should contain 1password")
 	}
 }
+
+func TestRenderClaudeConfig(t *testing.T) {
+	machines := []model.MachineState{
+		{
+			Hostname: "aurora-dx",
+			ClaudeLinks: map[string]string{
+				"CLAUDE.md":     "ok",
+				"settings.json": "ok",
+				"rules":         "ok",
+				"hooks":         "ok",
+				"skills":        "ok",
+				"agents":        "wrong",
+			},
+		},
+		{
+			Hostname:    "sandbox",
+			ClaudeLinks: nil, // sandbox — skipped
+		},
+	}
+
+	output := RenderClaudeConfig(machines)
+
+	if !strings.Contains(output, "aurora-dx") {
+		t.Error("output should contain aurora-dx")
+	}
+	if !strings.Contains(output, "ok") {
+		t.Error("output should contain ok for valid symlinks")
+	}
+	if !strings.Contains(output, "wrong") {
+		t.Error("output should contain wrong for bad symlink")
+	}
+	if strings.Contains(output, "sandbox") {
+		t.Error("output should NOT contain sandbox (nil ClaudeLinks)")
+	}
+}

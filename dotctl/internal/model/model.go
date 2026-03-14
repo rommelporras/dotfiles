@@ -17,6 +17,7 @@ type MachineState struct {
 	SSHAgent     string            `json:"ssh_agent"`    // 1password, manual, none, n/a
 	SetupCreds   string            `json:"setup_creds"`  // ran, skipped, n/a
 	AtuinSync    string            `json:"atuin_sync"`   // synced, disabled, n/a
+	ClaudeLinks  map[string]string `json:"claude_links"` // item -> ok, wrong, file, missing, n/a
 }
 
 // ContainerInfo describes a distrobox container.
