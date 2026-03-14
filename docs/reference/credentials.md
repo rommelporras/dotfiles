@@ -21,10 +21,11 @@ cp id_ed25519.pub ~/.ssh/
 chmod 644 ~/.ssh/*.pub
 ssh-add -l    # verify 1Password agent works
 
-# Claude Code plugins
+# Claude Code plugins (marketplaces first, then install)
 claude plugin marketplace add anthropics/claude-plugins-official
 claude plugin marketplace add obra/superpowers-marketplace
 claude plugin install context7@claude-plugins-official --scope user
+claude plugin install playwright@claude-plugins-official --scope user
 claude plugin install superpowers@superpowers-marketplace --scope user
 claude plugin install episodic-memory@superpowers-marketplace --scope user
 

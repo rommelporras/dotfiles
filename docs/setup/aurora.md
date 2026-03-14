@@ -70,12 +70,18 @@
 ## 2. Install chezmoi and apply dotfiles
 
 ```bash
-# Clone the repo (chezmoi already installed via brew in step 3)
+# Clone both repos (chezmoi already installed via brew in step 3)
 mkdir -p ~/personal
 git clone git@github.com:rommelporras/dotfiles.git ~/personal/dotfiles
+git clone git@github.com:rommelporras/claude-config.git ~/personal/claude-config
 
 chezmoi init --apply ~/personal/dotfiles
 ```
+
+> **Note:** The bootstrap auto-clones `claude-config` via HTTPS if not found, but
+> cloning it manually first with SSH ensures you can push changes back later.
+> The bootstrap creates symlinks from `~/.claude/` to `~/personal/claude-config/`
+> for: `CLAUDE.md`, `settings.json`, `rules/`, `hooks/`, `skills/`, `agents/`.
 
 chezmoi will prompt for:
 - **context** — `personal` for Aurora host

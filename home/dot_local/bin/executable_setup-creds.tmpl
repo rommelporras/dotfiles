@@ -29,6 +29,7 @@ if command -v claude &>/dev/null; then
 
     # Plugins (user scope — available in all projects)
     claude plugin install context7@claude-plugins-official --scope user 2>/dev/null || true
+    claude plugin install playwright@claude-plugins-official --scope user 2>/dev/null || true
     claude plugin install superpowers@superpowers-marketplace --scope user 2>/dev/null || true
     claude plugin install episodic-memory@superpowers-marketplace --scope user 2>/dev/null || true
 
