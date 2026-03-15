@@ -33,8 +33,9 @@ claude plugin install episodic-memory@superpowers-marketplace --scope user
 claude mcp add --scope user --transport http context7 https://mcp.context7.com/mcp \
   --header "CONTEXT7_API_KEY: $(op read 'op://Kubernetes/Context7/api-key' --no-newline)"
 
-# Homelab kubeconfig
-cp homelab.yaml ~/.kube/
+# Homelab kubeconfigs (from 1Password "Kubeconfig" item)
+op item get 'Kubeconfig' --vault=Kubernetes --fields admin-kubeconfig > ~/.kube/homelab.yaml
+op item get 'Kubeconfig' --vault=Kubernetes --fields claude-kubeconfig > ~/.kube/homelab-claude.yaml
 
 # GitLab
 glab auth login --hostname gitlab.k8s.rommelporras.com \
