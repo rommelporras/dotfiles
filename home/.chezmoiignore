@@ -1,0 +1,7 @@
+# README and repo meta files are not dotfiles
+README.md
+LICENSE
+docs/
+
+# Claude Code config is managed by claude-config repo (symlinks), not chezmoi
+.claude/

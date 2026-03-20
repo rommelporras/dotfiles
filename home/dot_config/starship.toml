@@ -1,0 +1,135 @@
+# Starship prompt — ys-inspired layout with Nerd Font icons
+# Requires a Nerd Font (JetBrainsMono recommended)
+# Docs: https://starship.rs/config/
+
+format = """
+$username\
+[@](242)\
+$hostname\
+[ in ](242)\
+$directory\
+[ on ](242)\
+$git_branch\
+$git_status\
+$kubernetes\
+$aws\
+$docker_context\
+$nodejs\
+$python\
+$golang\
+$rust\
+$java\
+$lua\
+$ruby\
+$terraform\
+$cmd_duration\
+$time\
+$line_break\
+$character"""
+
+[username]
+show_always = true
+style_user = "bold cyan"
+style_root = "bold red"
+format = "[$user]($style)"
+
+[hostname]
+ssh_only = false
+style = "bold green"
+format = "[$hostname]($style)"
+ssh_symbol = " "
+
+[directory]
+truncation_length = 5
+truncate_to_repo = false
+style = "bold yellow"
+format = "[$path]($style)[$read_only]($read_only_style)"
+read_only = " 󰌾"
+
+[git_branch]
+symbol = " "
+style = "bold purple"
+format = "[$symbol$branch(:$remote_branch)]($style)"
+
+[git_status]
+format = '([\[$all_status$ahead_behind\]]($style))'
+style = "bold red"
+conflicted = "="
+ahead = "⇡"
+behind = "⇣"
+diverged = "⇕"
+untracked = "?"
+stashed = "*"
+modified = "!"
+staged = "+"
+renamed = "»"
+deleted = "x"
+
+[time]
+disabled = false
+style = "242"
+format = " [$time]($style)"
+time_format = "%H:%M:%S"
+
+[kubernetes]
+disabled = false
+symbol = "󱃾 "
+style = "bold cyan"
+format = ' [$symbol$context( \($namespace\))]($style)'
+detect_env_vars = ['KUBECONFIG']
+
+[aws]
+symbol = "  "
+style = "bold yellow"
+format = ' [$symbol($profile)]($style)'
+
+[docker_context]
+symbol = " "
+style = "bold cyan"
+format = ' [$symbol$context]($style)'
+
+[nodejs]
+symbol = " "
+style = "bold green"
+format = ' [$symbol($version)]($style)'
+detect_files = ["package.json", ".node-version"]
+
+[python]
+symbol = " "
+style = "bold yellow"
+format = ' [$symbol${pyenv_prefix}(${version})(\($virtualenv\))]($style)'
+
+[golang]
+symbol = " "
+
+[rust]
+symbol = "󱘗 "
+
+[java]
+symbol = " "
+
+[lua]
+symbol = " "
+
+[ruby]
+symbol = " "
+
+[terraform]
+symbol = "󱁢 "
+
+[cmd_duration]
+min_time = 2_000
+format = " [󰔛 $duration]($style)"
+style = "bold yellow"
+
+[character]
+success_symbol = "[❯](bold green)"
+error_symbol = "[✗](bold red)"
+
+# rpm-ostree deployment indicator (no-ops on non-ostree systems)
+[custom.update]
+when = "/usr/bin/rpm-ostree status --json | /usr/bin/jq -e \".deployments[0].booted == false\" > /dev/null;"
+command = 'echo "New deployment staged"'
+symbol = ""
+format = " $symbol [($output)]($style) "
+style = "italic green"

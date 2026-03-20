@@ -1,0 +1,17 @@
+title = "dotfiles gitleaks config"
+
+[extend]
+useDefault = true
+
+# Note: op:// references are secret *paths*, not secrets — they're intentional in templates.
+# Note: homelab IPs are intentional configuration in a dotfiles repo.
+# Both were removed as custom rules since they generate false positives here.
+# The default ruleset (above) catches actual secrets: tokens, keys, passwords.
+
+[allowlist]
+paths = [
+    '''CLAUDE\.md''',
+    '''README\.md''',
+    '''\.gitleaks\.toml''',
+    '''docs/''',
+]

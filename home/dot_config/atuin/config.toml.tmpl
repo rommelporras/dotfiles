@@ -1,0 +1,9 @@
+{{ if .atuin_sync_address -}}
+sync_address = {{ .atuin_sync_address | quote }}
+{{ end -}}
+auto_sync = true
+search_mode = "fuzzy"
+filter_mode = "global"
+style = "compact"
+inline_height = 30
+show_preview = true

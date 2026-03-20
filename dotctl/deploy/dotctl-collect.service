@@ -1,0 +1,12 @@
+[Unit]
+Description=dotctl dotfiles status collector
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/bin/dotctl collect
+Environment=HOME=%h
+
+[Install]
+WantedBy=default.target

@@ -1,0 +1,363 @@
+#!/bin/bash
+set -euo pipefail
+
+echo "=== Dotfiles bootstrap ==="
+echo "Platform: {{ .platform }}, Context: {{ .context }}"
+
+# Detect platform
+IS_WSL=false
+IS_AURORA=false
+IS_DISTROBOX=false
+
+if grep -qi microsoft /proc/version 2>/dev/null; then
+    IS_WSL=true
+fi
+if grep -qi aurora /etc/os-release 2>/dev/null; then
+    IS_AURORA=true
+fi
+if [ -n "${DISTROBOX_ENTER_PATH:-}" ]; then
+    IS_DISTROBOX=true
+fi
+
+echo "Runtime: WSL=$IS_WSL, Aurora=$IS_AURORA, Distrobox=$IS_DISTROBOX"
+
+# ─── Update base packages (apt-based systems) ────────────────────────
+
+if [ "$IS_AURORA" = false ] && command -v apt-get &>/dev/null; then
+    echo "Updating base packages..."
+    sudo apt-get update -qq && sudo apt-get upgrade -y -qq
+fi
+
+{{ if eq .platform "distrobox" -}}
+# Set locale
+sudo apt-get install -y locales
+sudo locale-gen en_US.UTF-8
+export LANG=en_US.UTF-8
+{{ end -}}
+
+# ─── Claude Code: config repo symlinks ───────────────────────────────
+
+# On Aurora/WSL: clone if needed. On Distrobox: host repo is already accessible.
+if [ "$IS_DISTROBOX" = true ]; then
+    # Normalize /var/home → /home for container compatibility
+    HOST_HOME="/home/{{ .chezmoi.username }}"
+    CLAUDE_CONFIG_REPO="$HOST_HOME/personal/claude-config"
+else
+    CLAUDE_CONFIG_REPO="$HOME/personal/claude-config"
+    if [ ! -d "$CLAUDE_CONFIG_REPO" ]; then
+        echo "Cloning claude-config..."
+        mkdir -p "$HOME/personal"
+        git clone https://github.com/rommelporras/claude-config.git "$CLAUDE_CONFIG_REPO"
+    fi
+fi
+
+if [ -d "$CLAUDE_CONFIG_REPO" ]; then
+    mkdir -p "$HOME/.claude"
+    for item in CLAUDE.md settings.json rules hooks skills agents; do
+        if [ -e "$CLAUDE_CONFIG_REPO/$item" ]; then
+            # Remove existing file/dir before symlinking (ln -sf can't replace dirs)
+            if [ -e "$HOME/.claude/$item" ] && [ ! -L "$HOME/.claude/$item" ]; then
+                rm -r "$HOME/.claude/$item"
+            fi
+            ln -sfn "$CLAUDE_CONFIG_REPO/$item" "$HOME/.claude/$item"
+        fi
+    done
+    echo "Linked ~/.claude/ → $CLAUDE_CONFIG_REPO"
+else
+    echo "WARNING: claude-config not found at $CLAUDE_CONFIG_REPO — skipping Claude config"
+fi
+
+# ─── Core tools ──────────────────────────────────────────────────────
+
+# Zsh
+if ! command -v zsh &>/dev/null; then
+    if [ "$IS_AURORA" = false ]; then
+        echo "Installing zsh..."
+        sudo apt-get install -y -qq zsh
+    else
+        echo "WARNING: zsh not found on Aurora — install via 'brew install zsh'"
+    fi
+fi
+
+# Set zsh as default shell (skip on Aurora — use Ptyxis custom command instead)
+if [ "$IS_AURORA" = false ] && [ "$SHELL" != "$(command -v zsh)" ]; then
+    echo "Setting zsh as default shell..."
+    sudo chsh -s "$(command -v zsh)" "$(whoami)"
+fi
+
+# Starship
+if ! command -v starship &>/dev/null; then
+    echo "Installing starship..."
+    curl -sS https://starship.rs/install.sh | sh -s -- -y
+fi
+
+# JetBrainsMono Nerd Font (for Starship icons)
+# WSL: fonts render on the Windows side — install manually there
+# Immutable Fedora (Aurora/Bluefin/Kinoite/Silverblue): ujust devmode installs fonts via brew cask
+if [ "$IS_DISTROBOX" = true ]; then
+    FONT_DIR="$HOME/.local/share/fonts"
+    if [ ! -f "$FONT_DIR/JetBrainsMonoNerdFont-Regular.ttf" ]; then
+        echo "Installing JetBrainsMono Nerd Font..."
+        FONT_VERSION="3.3.0"
+        mkdir -p "$FONT_DIR"
+        curl -fsSL "https://github.com/ryanoasis/nerd-fonts/releases/download/v${FONT_VERSION}/JetBrainsMono.tar.xz" | tar xJ -C "$FONT_DIR"
+        fc-cache -f "$FONT_DIR"
+    fi
+fi
+
+# Atuin
+{{ if ne .atuin_account "none" -}}
+if ! command -v atuin &>/dev/null; then
+    echo "Installing atuin..."
+    curl -sSf https://setup.atuin.sh | bash -s -- --non-interactive
+fi
+{{ end -}}
+
+{{ if and (hasPrefix "personal-" .context) (eq .platform "distrobox") -}}
+# 1Password CLI (personal-<project> distrobox — native op with biometric unlock)
+if ! command -v op &>/dev/null; then
+    echo "Installing 1Password CLI..."
+    curl -sS https://downloads.1password.com/linux/keys/1password.asc | \
+        sudo gpg --dearmor --output /usr/share/keyrings/1password-archive-keyring.gpg
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/1password-archive-keyring.gpg] https://downloads.1password.com/linux/debian/$(dpkg --print-architecture) stable main" | \
+        sudo tee /etc/apt/sources.list.d/1password.list
+    sudo mkdir -p /etc/debsig/policies/AC2D62742012EA22/
+    curl -sS https://downloads.1password.com/linux/debian/debsig/1password.pol | \
+        sudo tee /etc/debsig/policies/AC2D62742012EA22/1password.pol
+    sudo mkdir -p /usr/share/debsig/keyrings/AC2D62742012EA22
+    curl -sS https://downloads.1password.com/linux/keys/1password.asc | \
+        sudo gpg --dearmor --output /usr/share/debsig/keyrings/AC2D62742012EA22/debsig.gpg
+    sudo apt-get update -qq && sudo apt-get install -y -qq 1password-cli
+fi
+{{ end -}}
+
+# Node.js LTS (Aurora — needed for Claude Code MCP plugins like playwright)
+if [ "$IS_AURORA" = true ] && ! command -v node &>/dev/null; then
+    echo "Installing node@24 (LTS) via brew..."
+    brew install node@24
+    brew link --force --overwrite node@24
+fi
+
+# Gitleaks (Aurora — enables pre-commit secret scanning for dotfiles repo)
+if [ "$IS_AURORA" = true ] && ! command -v gitleaks &>/dev/null; then
+    echo "Installing gitleaks..."
+    brew install gitleaks
+fi
+
+# Claude Code (WSL and Distrobox — Aurora installs via: brew install --cask claude-code)
+if [ "$IS_AURORA" = false ] && ! command -v claude &>/dev/null; then
+    echo "Installing Claude Code..."
+    curl -fsSL https://claude.ai/install.sh | bash
+fi
+
+# FZF (Aurora has system FZF via RPM — skip git install)
+if [ "$IS_AURORA" = false ]; then
+    if [ ! -d "$HOME/.fzf" ]; then
+        echo "Installing fzf..."
+        git clone --depth 1 https://github.com/junegunn/fzf.git "$HOME/.fzf"
+    fi
+    if [ ! -f "$HOME/.fzf.zsh" ]; then
+        echo "Setting up fzf shell integration..."
+        "$HOME/.fzf/install" --key-bindings --completion --no-update-rc --no-bash --no-fish
+    fi
+fi
+
+# xclip (for pbcopy/pbpaste aliases on WSL — not needed on Aurora or Distrobox)
+if ! command -v xclip &>/dev/null && [ "$IS_AURORA" = false ] && [ "$IS_DISTROBOX" = false ]; then
+    echo "Installing xclip..."
+    sudo apt-get install -y -qq xclip
+fi
+
+# ─── Environment-specific tools ──────────────────────────────────────
+
+{{ if eq .platform "wsl" -}}
+# NVM (WSL — provides Node.js for Claude Code plugins)
+if [ ! -d "$HOME/.nvm" ]; then
+    echo "Installing nvm..."
+    curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash
+fi
+# Install Node.js 24 if no version installed (provides npm/npx)
+export NVM_DIR="$HOME/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+if ! command -v node &>/dev/null; then
+    echo "Installing Node.js 24 via nvm..."
+    nvm install 24
+fi
+{{ end -}}
+
+{{ if eq .platform "distrobox" -}}
+# NVM (Distrobox — install to ~/.config/nvm to match zshrc NVM_DIR setting)
+export NVM_DIR="$HOME/.config/nvm"
+if [ ! -d "$NVM_DIR" ]; then
+    echo "Installing nvm..."
+    curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash
+fi
+# Install Node.js 24 if no version installed (provides npm/npx)
+[ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+if ! command -v node &>/dev/null; then
+    echo "Installing Node.js 24 via nvm..."
+    nvm install 24
+fi
+{{ end -}}
+
+{{ if or (eq .platform "wsl") (and (hasPrefix "personal-" .context) (eq .platform "distrobox")) -}}
+# Bun (WSL and personal-<project> distrobox)
+if ! command -v bun &>/dev/null; then
+    echo "Installing bun..."
+    curl -fsSL https://bun.sh/install | bash
+fi
+{{ end -}}
+
+{{ if and (hasPrefix "personal-" .context) (eq .platform "distrobox") -}}
+# Playwright (personal-<project> distrobox — E2E testing)
+if [ ! -d "$HOME/.cache/ms-playwright" ]; then
+    echo "Installing Playwright (chromium)..."
+    export BUN_INSTALL="$HOME/.bun"
+    export PATH="$BUN_INSTALL/bin:$PATH"
+    bun x playwright install --with-deps chromium
+fi
+{{ end -}}
+
+{{ if hasPrefix "work-" .context -}}
+# Terraform (work contexts — distrobox and WSL)
+if ! command -v terraform &>/dev/null && { [ "$IS_DISTROBOX" = true ] || [ "$IS_WSL" = true ]; }; then
+    echo "Installing terraform..."
+    sudo apt-get install -y -qq gnupg software-properties-common
+    curl -fsSL https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
+    echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
+    sudo apt-get update -qq && sudo apt-get install -y -qq terraform
+fi
+
+# AWS CLI v2 (work contexts — distrobox and WSL)
+if ! command -v aws &>/dev/null && { [ "$IS_DISTROBOX" = true ] || [ "$IS_WSL" = true ]; }; then
+    echo "Installing AWS CLI v2..."
+    curl -fsSL "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o /tmp/awscliv2.zip
+    unzip -q /tmp/awscliv2.zip -d /tmp
+    sudo /tmp/aws/install
+    rm -rf /tmp/aws /tmp/awscliv2.zip
+fi
+{{ end -}}
+
+{{ if and (or (eq .context "personal") (hasPrefix "work-" .context)) (or (eq .platform "distrobox") (eq .platform "wsl")) -}}
+# kubectl (personal distrobox, work distrobox + WSL — Aurora installs via brew)
+if ! command -v kubectl &>/dev/null; then
+    echo "Installing kubectl..."
+    KUBECTL_VERSION=$(curl -fsSL https://dl.k8s.io/release/stable.txt)
+    curl -fsSLo /tmp/kubectl "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl"
+    sudo install -o root -g root -m 0755 /tmp/kubectl /usr/local/bin/kubectl
+    rm -f /tmp/kubectl
+fi
+{{ end -}}
+
+{{ if and (or (eq .context "personal") (hasPrefix "personal-" .context)) (eq .platform "distrobox") -}}
+# glab CLI (personal/personal-<project> distrobox — Aurora installs via brew)
+if ! command -v glab &>/dev/null; then
+    echo "Installing glab..."
+    GLAB_VERSION=$(curl -sI "https://gitlab.com/gitlab-org/cli/-/releases/permalink/latest" | grep -i location | grep -oP 'v\K[0-9.]+')
+    curl -sLo /tmp/glab.deb "https://gitlab.com/gitlab-org/cli/-/releases/v${GLAB_VERSION}/downloads/glab_${GLAB_VERSION}_linux_amd64.deb"
+    sudo dpkg -i /tmp/glab.deb
+    rm -f /tmp/glab.deb
+fi
+{{ end -}}
+
+{{ if and (eq .context "personal") (eq .platform "distrobox") -}}
+# Ansible (personal distrobox only — Aurora installs via brew)
+if ! command -v ansible &>/dev/null; then
+    echo "Installing ansible..."
+    sudo apt-get install -y -qq ansible
+fi
+{{ end -}}
+
+# ─── Credential directories ──────────────────────────────────────────
+
+{{ if .has_work_creds -}}
+mkdir -p ~/.aws
+{{ end -}}
+{{ if or .has_work_creds .has_homelab_creds -}}
+mkdir -p ~/.kube
+{{ end -}}
+
+mkdir -p ~/.ssh
+chmod 700 ~/.ssh
+
+# ─── Gitleaks pre-commit hook ─────────────────────────────────────────
+# Install from hooks/ into .git/hooks/ so secret scanning runs on every commit.
+# Distrobox containers skip this — they don't commit to the dotfiles repo.
+{{ if ne .platform "distrobox" -}}
+_HOOK_SRC="{{ .chezmoi.workingTree }}/hooks/pre-commit"
+_HOOK_DST="{{ .chezmoi.workingTree }}/.git/hooks/pre-commit"
+if [ -f "$_HOOK_SRC" ] && [ -d "$(dirname "$_HOOK_DST")" ]; then
+    ln -sfn "$_HOOK_SRC" "$_HOOK_DST"
+    echo "Installed gitleaks pre-commit hook"
+fi
+{{ end -}}
+
+# ─── Post-install instructions ───────────────────────────────────────
+
+echo ""
+echo "=== Bootstrap complete ==="
+echo ""
+if [ "$IS_WSL" = true ]; then
+    echo "Font setup (WSL only — one time):"
+    echo "  Download JetBrainsMono Nerd Font from: https://www.nerdfonts.com/font-downloads"
+    echo "  Extract, select all .ttf files, right-click → Install"
+    echo "  Then set 'JetBrainsMono Nerd Font' as the font in Windows Terminal settings"
+    echo ""
+fi
+echo "Credential setup (do these once):"
+{{ if hasPrefix "personal-" .context -}}
+echo "  1. SSH keys:     Copy private + public keys to ~/.ssh/ (chmod 600/644)"
+echo "                   No 1Password SSH agent — keys are local"
+{{ else -}}
+echo "  1. SSH keys:     Copy .pub files to ~/.ssh/ (chmod 644)"
+echo "                   Private keys stay in 1Password — SSH agent serves them"
+{{ end -}}
+{{ if .has_work_creds -}}
+echo "  2. AWS:          aws sso login --profile <name>"
+{{ end -}}
+{{ if .has_homelab_creds -}}
+echo "  3. Kubeconfig:   Copy homelab.yaml → ~/.kube/"
+echo "  4. GitLab:       glab auth login --hostname gitlab.k8s.rommelporras.com"
+{{ end -}}
+echo "  5. GitHub:       gh auth login"
+{{ if ne .atuin_account "none" -}}
+echo "  6. Atuin:        atuin login -u {{ .atuin_account }}"
+{{ end -}}
+if [ "$IS_AURORA" = true ]; then
+    echo ""
+    echo "Aurora-specific setup:"
+    echo "  - Shell: In Ptyxis, edit the default profile → Custom Command → /home/linuxbrew/.linuxbrew/bin/zsh"
+    echo "  - DO NOT use chsh — atomic systems don't have it"
+    echo "  - 1Password: rpm-ostree install 1password 1password-cli && reboot"
+    echo "  - Enable SSH Agent in 1Password → Settings → Developer"
+    echo "  - Antigravity IDE:"
+    echo "      sudo tee /etc/yum.repos.d/antigravity.repo <<'REPO'"
+    echo "      [antigravity]"
+    echo "      name=Antigravity RPM Repository"
+    echo "      baseurl=https://us-central1-yum.pkg.dev/projects/antigravity-auto-updater-dev/antigravity-rpm"
+    echo "      enabled=1"
+    echo "      gpgcheck=0"
+    echo "      REPO"
+    echo "      rpm-ostree install antigravity && reboot"
+fi
+if [ "$IS_DISTROBOX" = true ]; then
+    echo "Distrobox credential + plugin seeding:"
+    echo "  Run 'setup-creds' to seed credentials and install Claude Code plugins (requires host 1Password unlock)"
+    echo ""
+fi
+if [ "$IS_DISTROBOX" = false ]; then
+    echo "Claude Code plugins (run once):"
+    echo "  claude plugin marketplace add anthropics/claude-plugins-official"
+    echo "  claude plugin marketplace add obra/superpowers-marketplace"
+    echo "  claude plugin marketplace add nextlevelbuilder/ui-ux-pro-max-skill"
+    echo "  claude plugin install context7@claude-plugins-official --scope user"
+    echo "  claude plugin install playwright@claude-plugins-official --scope user"
+    echo "  claude plugin install superpowers@superpowers-marketplace --scope user"
+    echo "  claude plugin install episodic-memory@superpowers-marketplace --scope user"
+    echo "  claude plugin install ui-ux-pro-max@ui-ux-pro-max-skill --scope user"
+    echo "  claude mcp add --scope user --transport http context7 https://mcp.context7.com/mcp \\"
+    echo "    --header \"CONTEXT7_API_KEY: \$(op read 'op://Kubernetes/Context7/api-key' --no-newline)\""
+fi
+echo ""
+echo ""
+echo "Restart your shell or run: exec zsh"

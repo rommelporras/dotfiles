@@ -1,0 +1,230 @@
+FROM ubuntu:24.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+# ─── System dependencies ─────────────────────────────────────────────
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    git \
+    openssh-client \
+    zsh \
+    build-essential \
+    unzip \
+    ca-certificates \
+    sqlite3 \
+    postgresql-client \
+    jq \
+    socat \
+    locales \
+    fontconfig \
+    xz-utils \
+    && locale-gen en_US.UTF-8 \
+    && rm -rf /var/lib/apt/lists/*
+
+ENV LANG=en_US.UTF-8
+
+# ─── Node.js 24.x LTS (npm, npx included) ───────────────────────────
+RUN curl -fsSL https://deb.nodesource.com/setup_24.x | bash - \
+    && apt-get install -y --no-install-recommends nodejs \
+    && rm -rf /var/lib/apt/lists/*
+
+# ─── Python 3 ────────────────────────────────────────────────────────
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3 python3-pip python3-venv \
+    && rm -rf /var/lib/apt/lists/*
+
+# ─── Podman (rootless container engine for compose services) ─────────
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    podman fuse-overlayfs slirp4netns uidmap dbus-x11 \
+    && rm -rf /var/lib/apt/lists/*
+
+# ─── host-spawn (forward commands to host — IDE, browsers, etc.) ─────
+RUN curl -Lo /usr/local/bin/host-spawn \
+    https://github.com/1player/host-spawn/releases/latest/download/host-spawn-x86_64 \
+    && chmod +x /usr/local/bin/host-spawn
+
+# ─── Non-root user (UID 1000 to match host for volume permissions) ───
+RUN userdel -r ubuntu 2>/dev/null || true \
+    && useradd -m -s /bin/zsh -u 1000 developer \
+    && echo "developer:100000:65536" >> /etc/subuid \
+    && echo "developer:100000:65536" >> /etc/subgid
+USER developer
+ENV HOME=/home/developer
+ENV PATH="$HOME/.local/bin:$HOME/.bun/bin:$HOME/.atuin/bin:$HOME/.fzf/bin:$PATH"
+
+# ─── uv (Python package manager) ────────────────────────────────────
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# ─── podman-compose ──────────────────────────────────────────────────
+RUN uv tool install podman-compose
+
+# ─── Bun ─────────────────────────────────────────────────────────────
+RUN curl -fsSL https://bun.sh/install | bash
+
+# ─── Starship prompt ────────────────────────────────────────────────
+RUN curl -sS https://starship.rs/install.sh | sh -s -- -y -b "$HOME/.local/bin"
+
+# ─── fzf ─────────────────────────────────────────────────────────────
+RUN git clone --depth 1 https://github.com/junegunn/fzf.git "$HOME/.fzf" \
+    && "$HOME/.fzf/install" --key-bindings --completion --no-update-rc --no-bash --no-fish
+
+# ─── JetBrainsMono Nerd Font ────────────────────────────────────────
+RUN FONT_VERSION="3.3.0" && \
+    mkdir -p "$HOME/.local/share/fonts" && \
+    curl -fsSL "https://github.com/ryanoasis/nerd-fonts/releases/download/v${FONT_VERSION}/JetBrainsMono.tar.xz" \
+      | tar -xJf - -C "$HOME/.local/share/fonts" && \
+    fc-cache -f "$HOME/.local/share/fonts"
+
+# ─── Atuin (shell history) ───────────────────────────────────────────
+RUN curl --proto '=https' --tlsv1.2 -LsSf https://setup.atuin.sh | sh \
+    && mkdir -p "$HOME/.config/atuin" \
+    && echo 'sync_address = "https://atuin.k8s.rommelporras.com"' > "$HOME/.config/atuin/config.toml"
+
+# ─── Oh My Zsh + plugins ────────────────────────────────────────────
+RUN sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended \
+    && git clone --depth 1 https://github.com/zsh-users/zsh-autosuggestions \
+       "$HOME/.oh-my-zsh/custom/plugins/zsh-autosuggestions"
+
+# ─── host-open (forward browser/URLs to host via host-spawn) ────────
+RUN printf '#!/bin/sh\nexec host-spawn -no-pty -cwd / xdg-open "$@"\n' > "$HOME/.local/bin/host-open" \
+    && chmod +x "$HOME/.local/bin/host-open"
+
+# ─── Claude Code CLI ────────────────────────────────────────────────
+RUN curl -fsSL https://claude.ai/install.sh | bash
+
+# ─── Playwright + Chromium ───────────────────────────────────────────
+USER root
+ENV PLAYWRIGHT_BROWSERS_PATH=/opt/playwright
+RUN npx playwright install --with-deps chromium 2>/dev/null || true \
+    && chmod -R o+rx /opt/playwright
+USER developer
+
+# ─── Shell configuration (.zshrc) ───────────────────────────────────
+RUN cat > "$HOME/.zshrc" << 'ZSHRC'
+# Sandbox .zshrc — mirrors distrobox shell experience
+export SHELL=$(command -v zsh)
+export PATH="$HOME/.local/bin:$HOME/.bun/bin:$HOME/.atuin/bin:$HOME/.fzf/bin:$PATH"
+
+# History
+HISTFILE=~/.zsh_history
+HISTSIZE=50000
+SAVEHIST=50000
+
+# Oh My Zsh
+export ZSH="$HOME/.oh-my-zsh"
+ZSH_THEME=""
+plugins=(
+    docker
+    docker-compose
+    git
+    git-commit
+    gitfast
+    history
+    last-working-dir
+    node
+    npm
+    nvm
+    pip
+    pod
+    python
+    safe-paste
+    ssh
+    sudo
+    vscode
+    zsh-interactive-cd
+    zsh-autosuggestions
+)
+source $ZSH/oh-my-zsh.sh
+
+# Starship prompt
+command -v starship &>/dev/null && eval "$(starship init zsh)"
+
+# Atuin shell history
+[ -f "$HOME/.atuin/bin/env" ] && . "$HOME/.atuin/bin/env"
+command -v atuin &>/dev/null && eval "$(atuin init zsh)"
+
+# Atuin first-run login (personal account)
+if command -v atuin &>/dev/null && [ ! -f "$HOME/.local/share/atuin/key" ]; then
+    if [ -n "${ATUIN_PASSWORD:-}" ] && [ -n "${ATUIN_KEY:-}" ]; then
+        echo "Atuin: logging in as personal..."
+        atuin login -u personal -p "$ATUIN_PASSWORD" --key "$ATUIN_KEY" \
+            && echo "Atuin: logged in." \
+            || echo "Atuin: login failed. Run manually: atuin login -u personal"
+        unset ATUIN_PASSWORD ATUIN_KEY
+    else
+        echo "Atuin: not logged in. Run: atuin login -u personal"
+    fi
+fi
+
+# Claude Code plugins (first-run install)
+if command -v claude &>/dev/null && [ ! -f "$HOME/.claude/.plugins-installed" ]; then
+    echo "Registering Claude Code marketplaces..."
+    claude plugin marketplace add anthropics/claude-plugins-official 2>/dev/null || true
+    claude plugin marketplace add obra/superpowers-marketplace 2>/dev/null || true
+    claude plugin marketplace add nextlevelbuilder/ui-ux-pro-max-skill 2>/dev/null || true
+    echo "Installing Claude Code plugins..."
+    claude plugin install context7@claude-plugins-official --scope user 2>/dev/null || true
+    claude plugin install playwright@claude-plugins-official --scope user 2>/dev/null || true
+    claude plugin install superpowers@superpowers-marketplace --scope user 2>/dev/null || true
+    claude plugin install episodic-memory@superpowers-marketplace --scope user 2>/dev/null || true
+    claude plugin install ui-ux-pro-max@ui-ux-pro-max-skill --scope user 2>/dev/null || true
+    touch "$HOME/.claude/.plugins-installed"
+    echo "Claude plugins installed."
+fi
+
+# Context7 MCP (first-run registration)
+if command -v claude &>/dev/null && [ ! -f "$HOME/.claude/.mcp-configured" ]; then
+    if [ -n "${CONTEXT7_API_KEY:-}" ]; then
+        echo "Registering Context7 MCP..."
+        claude mcp add --scope user --transport http context7 \
+            https://mcp.context7.com/mcp \
+            --header "CONTEXT7_API_KEY: $CONTEXT7_API_KEY" 2>/dev/null || true
+        touch "$HOME/.claude/.mcp-configured"
+        echo "Context7 MCP registered."
+    else
+        echo "Context7 MCP: CONTEXT7_API_KEY not set — skipping (re-run with secret mounted)"
+    fi
+fi
+
+# fzf
+[ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
+
+# 1Password SSH Agent (mounted from host at /run/ to avoid polluting persistent home)
+if [ -S /run/1password/agent.sock ]; then
+    export SSH_AUTH_SOCK=/run/1password/agent.sock
+fi
+
+# Aliases — general
+alias ll="ls -ltra"
+alias pip=pip3
+alias zshconfig="${EDITOR:-code} ~/.zshrc"
+alias ai-sandbox="$HOME/personal/dotfiles/bin/ai-sandbox"
+
+# Aliases — git
+alias gd="git diff"
+alias gcmsg="git commit -m"
+alias gitc="git checkout"
+alias gitm="git checkout main"
+
+# Browser forwarding to host (for OAuth flows, docs, etc.)
+export BROWSER="$HOME/.local/bin/host-open"
+
+# IDE forwarding (host apps via host-spawn, paths translated to host)
+if command -v host-spawn &>/dev/null && [ -n "${SANDBOX_HOST_HOME:-}" ]; then
+    _to_host_path() {
+        local p="$(realpath "${1:-.}" 2>/dev/null || echo "$1")"
+        echo "${p/#\/home\/developer/$SANDBOX_HOST_HOME}"
+    }
+    _host_run() { host-spawn -no-pty -cwd "$(_to_host_path .)" "$@"; }
+    code() { _host_run code "$(_to_host_path "${1:-.}")" "${@:2}"; }
+    antigravity() { _host_run antigravity "$(_to_host_path "${1:-.}")" "${@:2}"; }
+    agy() { _host_run antigravity "$(_to_host_path "${1:-.}")" "${@:2}"; }
+fi
+
+# Aliases — containers (podman as docker)
+alias docker=podman
+alias docker-compose=podman-compose
+ZSHRC
+
+WORKDIR /home/developer
+ENTRYPOINT ["/bin/zsh", "-c"]
