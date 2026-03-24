@@ -7,6 +7,9 @@ export SHELL=$(command -v zsh)
 
 # Path
 export PATH="$HOME/.local/bin:$PATH"
+{{ if eq .platform "wsl" -}}
+[ -d /usr/local/go/bin ] && export PATH="/usr/local/go/bin:$PATH"
+{{ end -}}
 
 # History
 HISTFILE=~/.zsh_history

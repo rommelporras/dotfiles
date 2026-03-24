@@ -154,7 +154,8 @@ These tools are installed by `chezmoi init --apply` — no manual action needed:
 | zsh, starship, fzf, atuin | x | | |
 | NVM + Node.js 24, Bun | x | | |
 | Claude Code | x | | |
-| GitHub CLI, uv, gitleaks | x | | |
+| Go, GitHub CLI, uv, gitleaks | x | | |
+| dotctl (built from source) | x | | |
 | 1Password CLI (`op.exe` wrapper) | prerequisite (step 1) | | |
 | Terraform, AWS CLI | | x | |
 | kubectl | | x | x |

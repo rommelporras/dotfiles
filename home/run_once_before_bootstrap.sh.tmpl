@@ -147,6 +147,23 @@ if [ "$IS_AURORA" = true ] && ! command -v node &>/dev/null; then
     brew link --force --overwrite node@24
 fi
 
+# Go (WSL via official tarball — Aurora installs via brew; needed to build dotctl)
+# The longsleep PPA only has Go 1.24; go.mod requires 1.26+. Official tarball is the
+# only source for latest Go. To update: re-run bootstrap or repeat these steps manually.
+if [ "$IS_WSL" = true ]; then
+    GO_REQUIRED="1.26"
+    GO_CURRENT=$(go version 2>/dev/null | grep -oP 'go\K[0-9]+\.[0-9]+' || echo "0.0")
+    if ! command -v go &>/dev/null || [ "$(printf '%s\n' "$GO_REQUIRED" "$GO_CURRENT" | sort -V | head -1)" != "$GO_REQUIRED" ]; then
+        echo "Installing/upgrading Go (need >=$GO_REQUIRED, have $GO_CURRENT)..."
+        GO_VERSION=$(curl -fsSL 'https://go.dev/VERSION?m=text' | head -1)
+        curl -fsSLo /tmp/go.tar.gz "https://go.dev/dl/${GO_VERSION}.linux-amd64.tar.gz"
+        sudo rm -rf /usr/local/go
+        sudo tar -C /usr/local -xzf /tmp/go.tar.gz
+        rm -f /tmp/go.tar.gz
+        export PATH="/usr/local/go/bin:$PATH"
+    fi
+fi
+
 # Gitleaks (Aurora via brew, WSL via GitHub release — enables pre-commit secret scanning)
 if ! command -v gitleaks &>/dev/null; then
     if [ "$IS_AURORA" = true ]; then
@@ -322,6 +339,24 @@ _HOOK_DST="{{ .chezmoi.workingTree }}/.git/hooks/pre-commit"
 if [ -f "$_HOOK_SRC" ] && [ -d "$(dirname "$_HOOK_DST")" ]; then
     ln -sfn "$_HOOK_SRC" "$_HOOK_DST"
     echo "Installed gitleaks pre-commit hook"
+fi
+{{ end -}}
+
+# ─── Build and install dotctl ─────────────────────────────────────────
+# Distrobox containers skip this — they don't run dotctl (host collects metrics).
+{{ if ne .platform "distrobox" -}}
+if command -v go &>/dev/null; then
+    DOTCTL_SRC="{{ .chezmoi.workingTree }}/dotctl"
+    if [ -d "$DOTCTL_SRC" ] && [ ! -x "$HOME/.local/bin/dotctl" ]; then
+        echo "Building dotctl..."
+        cd "$DOTCTL_SRC"
+        go build -o dotctl ./cmd/dotctl/
+        mkdir -p "$HOME/.local/bin"
+        cp dotctl "$HOME/.local/bin/dotctl"
+        rm -f dotctl
+        echo "Installed dotctl → ~/.local/bin/"
+        cd -
+    fi
 fi
 {{ end -}}
 
