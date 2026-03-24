@@ -181,10 +181,7 @@ alias nightly-restart='cd ~/eam/eam-nightly-restart'
 alias tmp='cd ~/eam/tmp'
 {{ end -}}
 
-{{ if or (eq .context "personal") (hasPrefix "personal-" .context) -}}
-# ─── Personal context ────────────────────────────────────────────────
 alias personal='cd ~/personal'
-{{ end -}}
 
 {{ if or (eq .context "personal") (hasPrefix "personal-" .context) (hasPrefix "work-" .context) -}}
 # Claude Code Telemetry → Homelab K8s OTel Collector

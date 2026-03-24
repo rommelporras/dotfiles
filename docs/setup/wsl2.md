@@ -113,7 +113,11 @@ Install JetBrainsMono Nerd Font manually on Windows:
 ## 4. Remaining manual steps
 
 ```bash
-gh auth login   # GitHub CLI (browser OAuth)
+# Enable dotctl auto-collection (pushes metrics to OTel every 10 min)
+cd ~/personal/dotfiles && make install-systemd
+
+# GitHub CLI (browser OAuth)
+gh auth login
 ```
 
 For additional credential setup (AWS SSO, kubeconfig), see
