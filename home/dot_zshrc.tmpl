@@ -102,7 +102,7 @@ export BROWSER="distrobox-host-exec xdg-open"
 # Aurora/WSL: pull in background using HTTPS (public repo, no SSH agent needed).
 {{ if ne .platform "distrobox" -}}
 if [ -d "$HOME/personal/claude-config" ]; then
-    (GIT_TERMINAL_PROMPT=0 timeout 5 git -C "$HOME/personal/claude-config" pull --ff-only --quiet 2>/dev/null) &
+    (GIT_TERMINAL_PROMPT=0 timeout 5 git -C "$HOME/personal/claude-config" pull --ff-only --quiet >/dev/null 2>&1 &)
 fi
 {{ end -}}
 
