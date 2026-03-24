@@ -142,8 +142,11 @@ If the bootstrap script changed (new tools added), re-run it:
 ```bash
 sudo -v   # cache sudo first — chezmoi captures stdin so you can't type passwords during apply
 chezmoi state delete-bucket --bucket=scriptState
-chezmoi apply
+chezmoi apply --no-pager --force
 ```
+
+> `--no-pager` prevents chezmoi from opening a diff viewer (blocks on `:` colon).
+> `--force` auto-overwrites oh-my-zsh cache files without prompting.
 
 ## What bootstrap installs automatically
 

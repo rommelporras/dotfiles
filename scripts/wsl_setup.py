@@ -278,7 +278,7 @@ def run_chezmoi_apply(chezmoi_bin: Path) -> int:
         return 1
 
     result = subprocess.run(
-        [str(chezmoi_bin), "init", "--apply"],
+        [str(chezmoi_bin), "init", "--apply", "--no-pager", "--force"],
         timeout=900,
     )
     if result.returncode != 0:
