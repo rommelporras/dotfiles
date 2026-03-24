@@ -126,7 +126,7 @@ alias gitm="git checkout main"
 alias agy='antigravity'
 {{ end -}}
 alias zshconfig="${EDITOR:-code} ~/.zshrc"
-alias dotup="chezmoi update -v && exec zsh"
+alias dotup="chezmoi update -v --no-pager --force && exec zsh"
 alias pip=pip3
 alias ai-sandbox="$HOME/personal/dotfiles/bin/ai-sandbox"
 

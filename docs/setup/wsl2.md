@@ -11,20 +11,20 @@
 Both share the same 1Password SSH agent bridge (npiperelay) and the same Atuin server
 but with different accounts (`personal` vs `work-eam`).
 
-## 0. Work laptop — creating the second WSL2 instance
+## 0. Creating a new WSL2 instance
 
-If you need a work-isolated WSL2 instance alongside an existing personal one:
+Each context gets its own isolated WSL2 instance:
 
 ```powershell
-# In PowerShell on Windows — create a fresh Ubuntu instance named Ubuntu-Work
-wsl --install --distribution Ubuntu --name Ubuntu-Work
+# In PowerShell on Windows
+wsl --install --distribution Ubuntu --name Ubuntu-Work      # work-eam context
+wsl --install --distribution Ubuntu --name Ubuntu-Personal  # personal context
 ```
 
-> If `--name` isn't supported on your Windows version, install a second Ubuntu
-> version from Microsoft Store (e.g. "Ubuntu 24.04 LTS") — it creates a separate instance.
+> If `--name` isn't supported on your Windows version, install additional Ubuntu
+> versions from Microsoft Store (e.g. "Ubuntu 24.04 LTS") — each creates a separate instance.
 
-Then continue with the steps below inside the new instance. Use context `work-eam`
-when chezmoi prompts. For the existing personal Ubuntu, use context `personal`.
+Then continue with the steps below inside the new instance.
 
 ## 1. Platform Prerequisites
 
@@ -92,7 +92,7 @@ The script:
 1. Validates WSL prerequisites (1Password, npiperelay, SSH agent)
 2. Clones `claude-config` repo to `~/personal/` (dotfiles already cloned above)
 3. Installs chezmoi and symlinks source → `~/personal/dotfiles`
-4. Writes non-interactive chezmoi config and runs `chezmoi init --apply`
+4. Writes non-interactive chezmoi config and runs `chezmoi init --apply --no-pager --force`
 5. Runs `setup-wsl-creds` (Claude plugins, Context7 MCP, Atuin login)
 
 After setup:
@@ -129,13 +129,13 @@ setup-wsl-creds
 When dotfiles are updated on Aurora (or from any machine), pull and apply on WSL2:
 
 ```bash
-dotup             # alias for: chezmoi update -v && exec zsh
+dotup             # alias for: chezmoi update -v --no-pager --force && exec zsh
 ```
 
 Or manually:
 ```bash
-chezmoi update -v   # git pull from GitHub + apply changes
-exec zsh            # reload shell if .zshrc changed
+chezmoi update -v --no-pager --force   # git pull from GitHub + apply changes
+exec zsh                               # reload shell if .zshrc changed
 ```
 
 If the bootstrap script changed (new tools added), re-run it:
