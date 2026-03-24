@@ -5,6 +5,121 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] - 2026-03-24
+
+WSL2 automation brought to parity with Distrobox. Credential seeding unified
+across all three platforms. Multiple UX fixes for chezmoi apply hangs and
+shell noise.
+
+### Added
+
+- **WSL2 one-command setup** (`scripts/wsl_setup.py`) — mirrors the Distrobox
+  workflow: validates prerequisites, clones repos, installs chezmoi, writes
+  non-interactive config, runs `chezmoi init --apply`, and seeds credentials.
+  Supports `--skip-creds`, `--personal-email`, `--work-email` flags
+- **WSL `op` wrapper** (`~/.local/bin/op`) — forwards `op` calls to Windows
+  `op.exe` for biometric unlock via the 1Password desktop app. Eliminates the
+  need for native Linux `op` in WSL
+- **WSL credential seeding** (`setup-wsl-creds`) — WSL-specific script for
+  Claude plugins, Context7 MCP, Atuin, GitLab, and GitHub CLI. Later unified
+  into `setup-creds` (see Refactored)
+- **`dotup` alias** — universal one-command shorthand:
+  `chezmoi update -v --no-pager --force && exec zsh`. Documented in all three
+  platform setup guides
+- **Go auto-install on WSL** — downloads official Go tarball (1.26+) since the
+  Ubuntu PPA only has 1.24. Includes version comparison to skip if adequate
+- **dotctl auto-build** — bootstrap builds dotctl from source on Aurora and WSL
+  if Go is in PATH and `~/.local/bin/dotctl` doesn't exist. Skipped on Distrobox
+- **`--skip-creds` flag on `distrobox_setup.py`** — skip credential seeding
+  when 1Password isn't unlocked, matching `wsl_setup.py` parity
+- **dotctl credential collectors** (`dotctl/internal/collector/creds.go`) —
+  `DetectSSHAgent()`, `DetectSetupCreds()`, `DetectAtuinSync()` functions.
+  These were missing from v0.1.0 due to a `.gitignore` pattern matching the
+  original `credentials.go` filename
+- **Bootstrap: jq** installed on apt-based platforms (WSL, Distrobox) for
+  Claude Code statusline JSON parsing
+- **Bootstrap: GitHub CLI (`gh`)** auto-installed on WSL via apt
+- **Bootstrap: `uv`** auto-installed on WSL and Distrobox via curl
+- **Bootstrap: gitleaks** auto-installed on WSL via GitHub release tarball
+  (previously Aurora-only via brew)
+- **Go PATH** added to `.zshrc` on WSL (`/usr/local/go/bin`)
+- **chezmoi PATH symlink** — bootstrap ensures chezmoi is at `~/.local/bin/`
+  regardless of where `get.chezmoi.io` installs it
+
+### Changed
+
+- **`personal` alias is now universal** — `alias personal='cd ~/personal'` is
+  no longer gated to personal/personal-* contexts since `~/personal/` exists on
+  all environments
+- **`--no-pager --force` on `dotup`** — prevents diff pager hangs and oh-my-zsh
+  cache overwrite prompts when syncing dotfiles
+- **`--no-pager --force` on Distrobox chezmoi apply** — same fix applied to
+  `distrobox_lib.py` bootstrap, preventing hangs in non-interactive container
+  setup
+- **Bootstrap post-install messages simplified** — all non-Distrobox platforms
+  now print `setup-creds` instead of listing individual plugin commands
+- **Aurora docs overhauled** — added Antigravity IDE install step, "What
+  bootstrap installs automatically" summary table, credential seeding via
+  `setup-creds`, `--no-pager --force` on re-apply, chezmoi init re-run guidance,
+  dotctl auto-build note, `--skip-creds` on distrobox setup
+- **Distrobox docs updated** — added note that `dotup` is unnecessary inside
+  containers (symlinked source), `--no-pager --force` on re-apply, chezmoi init
+  re-run guidance, `--skip-creds` documentation
+- **WSL2 docs rewritten** — streamlined from 7 manual sections to 5 automated
+  steps, prerequisites split into Windows-side vs WSL-side, added bootstrap
+  summary table, added `make install-systemd` step
+
+### Fixed
+
+- **zsh job control noise** on new terminal tabs — background `git pull` for
+  claude-config no longer registers in zsh's job table. Fixed by moving `&`
+  inside the subshell: `(cmd &)` instead of `(cmd) &`
+- **chezmoi apply hangs on WSL** — `--no-pager` prevents the diff viewer from
+  blocking on `:` colon, `--force` auto-overwrites oh-my-zsh cache files
+- **Atuin re-login on every `setup-creds` run** — login detection changed from
+  matching the account name (`{{ .atuin_account }}`) to checking for any
+  `^Username:` in `atuin status`. The old check never matched because the
+  template variable differed from the server-side username
+- **Missing dotctl credential functions** — `credentials.go` was silently
+  excluded by `.gitignore`. Renamed to `creds.go` (test file renamed to match)
+- **jq missing on WSL/Distrobox** — Claude Code statusline script requires jq
+  for JSON parsing; now auto-installed during bootstrap
+
+### Refactored
+
+- **Unified `setup-creds`** — single script auto-detects platform
+  (distrobox/WSL/Aurora) and sets the 1Password access method accordingly.
+  Eliminates ~130 lines of duplicated logic from `setup-wsl-creds` (now a
+  thin backwards-compatibility wrapper: `exec setup-creds "$@"`). Also adds
+  GitHub CLI auth detection and Context7 MCP registration to all platforms
+  (previously missing from Distrobox)
+- **`setup-creds` now works on Aurora** — previously Aurora had no credential
+  seeding script. Users had to manually run 8+ CLI commands for plugins, MCP,
+  and auth
+
+### Verified Platforms
+
+- **Aurora DX** — `chezmoi apply`, `setup-creds`, `dotup` alias verified
+- **Distrobox** — both `personal` and `work-eam` containers deleted, recreated
+  from scratch, `setup-creds` run successfully (plugins, Context7, Atuin, GitLab)
+- **AI Sandbox** — `fintrack` project created, tools verified (8/8), SSH agent
+  connected via 1Password socket, git clone via SSH confirmed, destroyed cleanly
+- **WSL2** — `wsl_setup.py` run from clean instance, `work-eam` context
+  bootstrapped end-to-end
+
+### Known Issues
+
+- Bootstrap `chsh` check (WSL/Distrobox only) compares `$SHELL` at runtime,
+  causing repeated sudo prompts on re-apply
+- Starship install has no version pinning
+- `ubuntu:24.04` image tag in `distrobox.ini` is mutable (no pinned digest)
+- OTel endpoint IP (`10.10.30.22`) is hardcoded in zshrc template
+- `ai-sandbox` alias in sandbox `.zshrc` is non-functional (dotfiles repo
+  not mounted inside container)
+- `verify_personal_project()` in distrobox tests is dead code (no
+  personal-\<project\> container in test matrix)
+- setup-creds internals untested (only file existence checked)
+
 ## [0.1.0] - 2026-03-19
 
 Initial release. Aurora DX, Distrobox, and AI Sandbox verified from scratch.
