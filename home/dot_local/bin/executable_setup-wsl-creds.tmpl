@@ -65,7 +65,7 @@ fi
 [ -f "$HOME/.atuin/bin/env" ] && . "$HOME/.atuin/bin/env"
 if command -v atuin &>/dev/null; then
     echo "--- Atuin ({{ .atuin_account }}) ---"
-    if atuin status 2>/dev/null | grep -q "{{ .atuin_account }}"; then
+    if atuin status 2>/dev/null | grep -q "^Username:"; then
         echo "Atuin: already logged in, syncing..."
         atuin sync
     else
