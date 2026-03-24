@@ -144,14 +144,13 @@ See [docs/reference/credentials.md](../reference/credentials.md).
 When dotfiles are updated on Aurora (or from any machine), pull and apply on WSL2:
 
 ```bash
-chezmoi update    # git pull from GitHub + apply changes
-exec zsh          # reload shell if .zshrc changed
+dotup             # alias for: chezmoi update -v && exec zsh
 ```
 
-`chezmoi update` is equivalent to:
+Or manually:
 ```bash
-cd ~/.local/share/chezmoi && git pull
-chezmoi apply
+chezmoi update -v   # git pull from GitHub + apply changes
+exec zsh            # reload shell if .zshrc changed
 ```
 
 If the bootstrap script changed (new tools added), re-run it:

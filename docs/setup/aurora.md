@@ -153,9 +153,14 @@ See [docs/reference/credentials.md](../reference/credentials.md).
 After pushing changes from any machine:
 
 ```bash
+dotup             # alias for: chezmoi update -v && exec zsh
+```
+
+Or manually:
+```bash
 cd ~/personal/dotfiles
 git pull
-chezmoi apply     # apply to Aurora host
+chezmoi apply -v  # apply to Aurora host
 exec zsh          # reload shell if .zshrc changed
 ```
 
