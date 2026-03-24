@@ -215,8 +215,8 @@ is blanket-ignored in `.chezmoiignore` so chezmoi never touches it.
 For AI sandbox: claude-config is mounted read-only at `/run/claude-config/`,
 with symlinks created during home seeding and `settings.json` copied writable.
 
-Plugin and MCP setup is handled by `setup-creds` (distrobox), first-run .zshrc
-automation (sandbox), or manual CLI commands (Aurora/WSL).
+Plugin and MCP setup is handled by `setup-creds` (distrobox), `setup-wsl-creds`
+(WSL), first-run .zshrc automation (sandbox), or manual CLI commands (Aurora).
 
 ## dotctl (Go CLI)
 

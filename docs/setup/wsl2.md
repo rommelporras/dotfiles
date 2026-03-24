@@ -28,29 +28,31 @@ when chezmoi prompts. For the existing personal Ubuntu, use context `personal`.
 
 ## 1. Platform Prerequisites
 
+### Windows side (one time per machine)
+
 1. Install **1Password for Windows** (desktop app, not Microsoft Store)
 2. Settings → Developer → enable **SSH Agent** → choose "Use Key Names"
-3. Settings → Developer → enable **Integrate with 1Password CLI** (needed for `op` in WSL)
-4. Disable the **OpenSSH Authentication Agent** service
+3. Settings → Developer → enable **Integrate with 1Password CLI**
+4. Install **1Password CLI on Windows**: `winget install AgileBits.1Password.CLI`
+5. Disable the **OpenSSH Authentication Agent** service
    (`Win+R` → `services.msc` → "OpenSSH Authentication Agent" → Startup type: Disabled)
-5. Import SSH keys via 1Password desktop: New Item → SSH Key → Add Private Key → Import
+6. Import SSH keys via 1Password desktop: New Item → SSH Key → Add Private Key → Import
    - Store as "SSH Key" category in **Private** vault (not Secure Note — agent won't serve those)
-6. Install the npiperelay bridge (required for WSL to access Windows 1Password agent):
+
+> **1Password CLI on WSL:** The native Linux `op` binary cannot connect to the Windows
+> desktop app. The bootstrap deploys a wrapper at `~/.local/bin/op` that forwards calls
+> to Windows `op.exe`, which triggers the desktop app biometric popup for authorization.
+> No `op account add` or `eval $(op signin)` needed — just keep the desktop app running.
+
+### WSL side (once per instance)
+
+7. Install the npiperelay bridge (required for WSL to access Windows 1Password agent):
    ```bash
-   sudo apt install -y socat
+   sudo apt install -y socat unzip git curl
    curl -Lo /tmp/npiperelay.zip "https://github.com/jstarks/npiperelay/releases/latest/download/npiperelay_windows_amd64.zip"
    unzip -o /tmp/npiperelay.zip -d /tmp/npiperelay
    sudo install -m 0755 /tmp/npiperelay/npiperelay.exe /usr/local/bin/npiperelay.exe
    rm -rf /tmp/npiperelay /tmp/npiperelay.zip
-   ```
-7. Install **1Password CLI** in WSL (connects to Windows 1Password desktop app via socket):
-   ```bash
-   curl -sS https://downloads.1password.com/linux/keys/1password.asc | \
-     sudo gpg --dearmor --output /usr/share/keyrings/1password-archive-keyring.gpg
-   echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/1password-archive-keyring.gpg] https://downloads.1password.com/linux/debian/$(dpkg --print-architecture) stable main" | \
-     sudo tee /etc/apt/sources.list.d/1password-cli.list
-   sudo apt update && sudo apt install -y 1password-cli
-   op --version   # verify install
    ```
 8. Start the SSH agent bridge manually (needed for git clone before `.zshrc` is applied):
    ```bash
@@ -61,40 +63,44 @@ when chezmoi prompts. For the existing personal Ubuntu, use context `personal`.
    ```
    After chezmoi apply, the `.zshrc` bridge script handles this automatically on every shell start.
 
-## 2. Install chezmoi and apply dotfiles
+## 2. Run setup script
+
+Clone the repo first, then one command handles the rest — installs chezmoi, applies
+dotfiles, installs Claude plugins, and seeds credentials:
 
 ```bash
-# Cache sudo first — bootstrap installs packages via apt
-sudo -v
+# Install uv (Python runner — needed for the setup script)
+curl -LsSf https://astral.sh/uv/install.sh | sh
+source ~/.local/bin/env
 
-# Clone claude-config first (SSH clone — enables pushing changes later)
+# Clone dotfiles repo
 mkdir -p ~/personal
-git clone git@github.com:rommelporras/claude-config.git ~/personal/claude-config
+git clone git@github.com:rommelporras/dotfiles.git ~/personal/dotfiles
+cd ~/personal/dotfiles
 
-# Install chezmoi + clone this repo + run interactive prompts + apply
-sh -c "$(curl -fsLS get.chezmoi.io)" -- init --apply rommelporras
+# Run setup — work context
+uv run python scripts/wsl_setup.py work-eam --work-email you@company.com
+
+# Or — personal context
+uv run python scripts/wsl_setup.py personal --personal-email you@example.com
 ```
 
-> **Note:** The bootstrap auto-clones `claude-config` via HTTPS if not found, but
-> cloning it manually first with SSH ensures you can push changes back later.
-> The bootstrap creates symlinks from `~/.claude/` to `~/personal/claude-config/`
-> for: `CLAUDE.md`, `settings.json`, `rules/`, `hooks/`, `skills/`, `agents/`.
+> To skip credential seeding (if 1Password isn't unlocked yet), add `--skip-creds`.
+> You can run `setup-wsl-creds` later to finish.
 
-chezmoi will ask (answers vary by context):
-- **context** — `personal` for personal use (work laptop or gaming desktop), `work-eam` for work
-- **personal email** — your git email (always prompted, even for work contexts on WSL)
-- **work email** — only if context is `work-*`
-- **work credentials** — only if context is `work-*`
-- **homelab credentials** — if context is `personal` (also prompted on Aurora for all contexts)
-- **Atuin sync address** — `https://atuin.k8s.rommelporras.com` (or blank to skip)
-- **Atuin account** — `personal` or `work-eam` (or `none` to skip)
+The script:
+1. Validates WSL prerequisites (1Password, npiperelay, SSH agent)
+2. Clones `claude-config` repo to `~/personal/` (dotfiles already cloned above)
+3. Installs chezmoi and symlinks source → `~/personal/dotfiles`
+4. Writes non-interactive chezmoi config and runs `chezmoi init --apply`
+5. Runs `setup-wsl-creds` (Claude plugins, Context7 MCP, Atuin login)
 
-After install:
+After setup:
 ```bash
 exec zsh
 ```
 
-> **WSL:** If new terminal windows still open in bash, log out and back in — `chsh`
+> If new terminal windows still open in bash, log out and back in — `chsh`
 > requires a new login session.
 
 ## 3. Font setup
@@ -104,42 +110,21 @@ Install JetBrainsMono Nerd Font manually on Windows:
 2. Extract zip, select all `.ttf` files, right-click → Install
 3. Windows Terminal → Settings → Profile → Appearance → Font face → `JetBrainsMono Nerd Font`
 
-## 4. Install GitHub CLI
+## 4. Remaining manual steps
 
 ```bash
-(type -p wget >/dev/null || sudo apt install wget -y) \
-  && sudo mkdir -p -m 755 /etc/apt/keyrings \
-  && out=$(mktemp) && wget -nv -O$out https://cli.github.com/packages/githubcli-archive-keyring.gpg \
-  && cat $out | sudo tee /etc/apt/keyrings/githubcli-archive-keyring.gpg > /dev/null \
-  && sudo chmod go+r /etc/apt/keyrings/githubcli-archive-keyring.gpg \
-  && echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null \
-  && sudo apt update && sudo apt install gh -y
-gh auth login
+gh auth login   # GitHub CLI (browser OAuth)
 ```
 
-## 5. Claude Code plugins
+For additional credential setup (AWS SSO, kubeconfig), see
+[docs/reference/credentials.md](../reference/credentials.md).
 
-Bootstrap echoes the exact commands to run. After install:
-
+If `setup-wsl-creds` failed (1Password was locked), re-run it:
 ```bash
-claude plugin marketplace add anthropics/claude-plugins-official
-claude plugin marketplace add obra/superpowers-marketplace
-claude plugin marketplace add nextlevelbuilder/ui-ux-pro-max-skill
-claude plugin install context7@claude-plugins-official --scope user
-claude plugin install playwright@claude-plugins-official --scope user
-claude plugin install superpowers@superpowers-marketplace --scope user
-claude plugin install episodic-memory@superpowers-marketplace --scope user
-claude plugin install ui-ux-pro-max@ui-ux-pro-max-skill --scope user
-
-claude mcp add --scope user --transport http context7 https://mcp.context7.com/mcp \
-  --header "CONTEXT7_API_KEY: $(op read 'op://Kubernetes/Context7/api-key' --no-newline)"
+setup-wsl-creds
 ```
 
-## 6. Set up credentials
-
-See [docs/reference/credentials.md](../reference/credentials.md).
-
-## 7. Keeping in sync
+## 5. Keeping in sync
 
 When dotfiles are updated on Aurora (or from any machine), pull and apply on WSL2:
 
@@ -155,6 +140,26 @@ exec zsh            # reload shell if .zshrc changed
 
 If the bootstrap script changed (new tools added), re-run it:
 ```bash
+sudo -v   # cache sudo first — chezmoi captures stdin so you can't type passwords during apply
 chezmoi state delete-bucket --bucket=scriptState
 chezmoi apply
 ```
+
+## What bootstrap installs automatically
+
+These tools are installed by `chezmoi init --apply` — no manual action needed:
+
+| Tool | All contexts | `work-*` only | `personal` only |
+|---|---|---|---|
+| zsh, starship, fzf, atuin | x | | |
+| NVM + Node.js 24, Bun | x | | |
+| Claude Code | x | | |
+| GitHub CLI, uv, gitleaks | x | | |
+| 1Password CLI (`op.exe` wrapper) | prerequisite (step 1) | | |
+| Terraform, AWS CLI | | x | |
+| kubectl | | x | x |
+
+**Still manual:**
+- 1Password + npiperelay (step 1 — Windows-side setup)
+- `gh auth login` (step 4 — browser OAuth)
+- Font install (step 3 — Windows-side)

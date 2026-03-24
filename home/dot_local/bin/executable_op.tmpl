@@ -1,0 +1,7 @@
+{{ if eq .platform "wsl" -}}
+#!/bin/bash
+# Wrapper: forward op calls to Windows op.exe for biometric unlock via desktop app.
+# The native Linux op binary cannot connect to the Windows 1Password app on WSL2.
+# op.exe triggers the desktop app popup for authorization automatically.
+exec op.exe "$@"
+{{ end -}}

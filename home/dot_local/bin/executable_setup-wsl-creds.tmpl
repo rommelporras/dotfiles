@@ -1,0 +1,138 @@
+#!/bin/bash
+set -euo pipefail
+
+# Credential and plugin seeding for WSL instances.
+# Uses 1Password CLI directly (connected to Windows 1Password desktop app).
+# Run once after first chezmoi apply, or re-run to update.
+
+if grep -qi microsoft /proc/version 2>/dev/null; then
+    : # WSL confirmed
+else
+    echo "Error: This script is for WSL only. Use 'setup-creds' in Distrobox."
+    exit 1
+fi
+
+if ! command -v op &>/dev/null; then
+    echo "Error: 1Password CLI (op.exe) not found."
+    echo "Install on Windows: winget install AgileBits.1Password.CLI"
+    exit 1
+fi
+
+# ─── Claude Code plugins (no 1Password dependency) ────────────────────
+if command -v claude &>/dev/null; then
+    echo "=== Claude Code Plugins ==="
+
+    # Marketplaces
+    claude plugin marketplace add anthropics/claude-plugins-official 2>/dev/null || true
+    claude plugin marketplace add obra/superpowers-marketplace 2>/dev/null || true
+    claude plugin marketplace add nextlevelbuilder/ui-ux-pro-max-skill 2>/dev/null || true
+
+    # Plugins (user scope — available in all projects)
+    claude plugin install context7@claude-plugins-official --scope user 2>/dev/null || true
+    claude plugin install playwright@claude-plugins-official --scope user 2>/dev/null || true
+    claude plugin install superpowers@superpowers-marketplace --scope user 2>/dev/null || true
+    claude plugin install episodic-memory@superpowers-marketplace --scope user 2>/dev/null || true
+    claude plugin install ui-ux-pro-max@ui-ux-pro-max-skill --scope user 2>/dev/null || true
+
+    echo "Plugins installed"
+    echo ""
+else
+    echo "Claude Code not installed — skipping plugin setup"
+fi
+
+echo "=== Credential Setup ==="
+echo "This will prompt 1Password for authentication."
+echo ""
+
+# ─── Context7 MCP (needs 1Password for API key) ──────────────────────
+if command -v claude &>/dev/null; then
+    CONTEXT7_KEY=$(op read 'op://Kubernetes/Context7/api-key' --no-newline 2>/dev/null || true)
+    if [ -n "$CONTEXT7_KEY" ]; then
+        if claude mcp add --scope user --transport http context7 \
+            https://mcp.context7.com/mcp \
+            --header "CONTEXT7_API_KEY: $CONTEXT7_KEY" 2>/dev/null; then
+            echo "Context7 MCP registered"
+        else
+            echo "Context7 MCP already configured (skipped)"
+        fi
+    else
+        echo "WARNING: Could not read Context7 API key — unlock 1Password and re-run"
+    fi
+fi
+
+{{ if ne .atuin_account "none" -}}
+# ─── Atuin ────────────────────────────────────────────────────────────
+[ -f "$HOME/.atuin/bin/env" ] && . "$HOME/.atuin/bin/env"
+if command -v atuin &>/dev/null; then
+    echo "--- Atuin ({{ .atuin_account }}) ---"
+    if atuin status 2>/dev/null | grep -q "{{ .atuin_account }}"; then
+        echo "Atuin: already logged in, syncing..."
+        atuin sync
+    else
+        ATUIN_PASS=$(op read "op://Kubernetes/Atuin/{{ if hasPrefix "personal-" .context }}personal{{ else }}{{ .context }}{{ end }}-password")
+        ATUIN_KEY=$(op read "op://Kubernetes/Atuin/encryption-key")
+        ATUIN_DATA="$HOME/.local/share/atuin"
+        ATUIN_BACKUP=""
+        if [ -d "$ATUIN_DATA" ]; then
+            ATUIN_BACKUP=$(mktemp -d)
+            cp -a "$ATUIN_DATA" "$ATUIN_BACKUP/atuin"
+        fi
+        if atuin login -u "{{ .atuin_account }}" -p "$ATUIN_PASS" --key "$ATUIN_KEY"; then
+            atuin sync
+            [ -n "$ATUIN_BACKUP" ] && rm -rf "$ATUIN_BACKUP"
+        else
+            echo "ERROR: Atuin login failed — restoring local state"
+            if [ -n "$ATUIN_BACKUP" ]; then
+                rm -rf "$ATUIN_DATA"
+                mv "$ATUIN_BACKUP/atuin" "$ATUIN_DATA"
+                rm -rf "$ATUIN_BACKUP"
+            fi
+            echo "  Verify account '{{ .atuin_account }}' exists on the Atuin server"
+            echo "  and that 1Password field '{{ if hasPrefix "personal-" .context }}personal{{ else }}{{ .context }}{{ end }}-password' is correct"
+        fi
+    fi
+    echo "Atuin: done"
+else
+    echo "Atuin: not installed, skipping"
+fi
+{{ end -}}
+
+{{ if or .has_homelab_creds (hasPrefix "personal-" .context) -}}
+# ─── GitLab (self-hosted) ────────────────────────────────────────────
+if command -v glab &>/dev/null; then
+    echo "--- GitLab (gitlab.k8s.rommelporras.com) ---"
+    GLAB_TOKEN=$(op read "op://Kubernetes/Gitlab/personal-access-token" 2>/dev/null || true)
+    if [ -n "$GLAB_TOKEN" ]; then
+        echo "$GLAB_TOKEN" | glab auth login --hostname gitlab.k8s.rommelporras.com --stdin
+        echo "glab: done"
+    else
+        echo "WARNING: Could not read GitLab token — re-run when 1Password is available"
+    fi
+else
+    echo "glab: not installed, skipping"
+fi
+
+# ─── Kubeconfig (homelab) ────────────────────────────────────────────
+echo "--- Kubeconfig ---"
+echo "Manual step: copy homelab.yaml to ~/.kube/"
+{{ end -}}
+
+# ─── GitHub CLI ───────────────────────────────────────────────────────
+if command -v gh &>/dev/null; then
+    if gh auth status &>/dev/null; then
+        echo "GitHub CLI: already authenticated"
+    else
+        echo "--- GitHub CLI ---"
+        echo "Run: gh auth login"
+        echo "(Browser-based OAuth — cannot be automated)"
+    fi
+fi
+
+{{ if .has_work_creds -}}
+# ─── AWS ──────────────────────────────────────────────────────────────
+echo "--- AWS ---"
+echo "Manual step: run 'aws sso login --profile <name>' after setup"
+{{ end -}}
+
+echo ""
+echo "=== Done ==="

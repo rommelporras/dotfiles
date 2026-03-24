@@ -35,6 +35,15 @@ sudo locale-gen en_US.UTF-8
 export LANG=en_US.UTF-8
 {{ end -}}
 
+# ─── Ensure chezmoi is in PATH ────────────────────────────────────────
+# get.chezmoi.io installs to ./bin/ which may not be in PATH (e.g. ~/personal/bin/ on WSL)
+CHEZMOI_BIN="{{ .chezmoi.executable }}"
+if [ -x "$CHEZMOI_BIN" ] && [ ! -e "$HOME/.local/bin/chezmoi" ]; then
+    mkdir -p "$HOME/.local/bin"
+    ln -sf "$CHEZMOI_BIN" "$HOME/.local/bin/chezmoi"
+    echo "Symlinked chezmoi → ~/.local/bin/"
+fi
+
 # ─── Claude Code: config repo symlinks ───────────────────────────────
 
 # On Aurora/WSL: clone if needed. On Distrobox: host repo is already accessible.
@@ -138,10 +147,34 @@ if [ "$IS_AURORA" = true ] && ! command -v node &>/dev/null; then
     brew link --force --overwrite node@24
 fi
 
-# Gitleaks (Aurora — enables pre-commit secret scanning for dotfiles repo)
-if [ "$IS_AURORA" = true ] && ! command -v gitleaks &>/dev/null; then
-    echo "Installing gitleaks..."
-    brew install gitleaks
+# Gitleaks (Aurora via brew, WSL via GitHub release — enables pre-commit secret scanning)
+if ! command -v gitleaks &>/dev/null; then
+    if [ "$IS_AURORA" = true ]; then
+        echo "Installing gitleaks..."
+        brew install gitleaks
+    elif [ "$IS_WSL" = true ]; then
+        echo "Installing gitleaks..."
+        GITLEAKS_VERSION=$(curl -fsSL -o /dev/null -w '%{url_effective}' "https://github.com/gitleaks/gitleaks/releases/latest" | grep -oP 'v\K[0-9.]+')
+        curl -fsSLo /tmp/gitleaks.tar.gz "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+        sudo tar xzf /tmp/gitleaks.tar.gz -C /usr/local/bin gitleaks
+        rm -f /tmp/gitleaks.tar.gz
+    fi
+fi
+
+# GitHub CLI (WSL — Aurora installs via brew)
+if [ "$IS_WSL" = true ] && ! command -v gh &>/dev/null; then
+    echo "Installing GitHub CLI..."
+    sudo mkdir -p -m 755 /etc/apt/keyrings
+    curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo tee /etc/apt/keyrings/githubcli-archive-keyring.gpg >/dev/null
+    sudo chmod go+r /etc/apt/keyrings/githubcli-archive-keyring.gpg
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list >/dev/null
+    sudo apt-get update -qq && sudo apt-get install -y -qq gh
+fi
+
+# uv (WSL and Distrobox — Aurora installs via brew)
+if [ "$IS_AURORA" = false ] && ! command -v uv &>/dev/null; then
+    echo "Installing uv..."
+    curl -LsSf https://astral.sh/uv/install.sh | sh
 fi
 
 # Claude Code (WSL and Distrobox — Aurora installs via: brew install --cask claude-code)
@@ -345,7 +378,11 @@ if [ "$IS_DISTROBOX" = true ]; then
     echo "  Run 'setup-creds' to seed credentials and install Claude Code plugins (requires host 1Password unlock)"
     echo ""
 fi
-if [ "$IS_DISTROBOX" = false ]; then
+if [ "$IS_WSL" = true ]; then
+    echo "Claude Code + credential setup (run once — requires 1Password unlocked):"
+    echo "  setup-wsl-creds"
+    echo ""
+elif [ "$IS_DISTROBOX" = false ]; then
     echo "Claude Code plugins (run once):"
     echo "  claude plugin marketplace add anthropics/claude-plugins-official"
     echo "  claude plugin marketplace add obra/superpowers-marketplace"
