@@ -26,6 +26,8 @@ echo "Runtime: WSL=$IS_WSL, Aurora=$IS_AURORA, Distrobox=$IS_DISTROBOX"
 if [ "$IS_AURORA" = false ] && command -v apt-get &>/dev/null; then
     echo "Updating base packages..."
     sudo apt-get update -qq && sudo apt-get upgrade -y -qq
+    # jq is needed by Claude Code statusline script and general JSON processing
+    command -v jq &>/dev/null || sudo apt-get install -y -qq jq
 fi
 
 {{ if eq .platform "distrobox" -}}
