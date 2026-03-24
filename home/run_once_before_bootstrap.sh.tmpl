@@ -415,22 +415,9 @@ if [ "$IS_DISTROBOX" = true ]; then
     echo "  Run 'setup-creds' to seed credentials and install Claude Code plugins (requires host 1Password unlock)"
     echo ""
 fi
-if [ "$IS_WSL" = true ]; then
-    echo "Claude Code + credential setup (run once — requires 1Password unlocked):"
-    echo "  setup-wsl-creds"
-    echo ""
-elif [ "$IS_DISTROBOX" = false ]; then
-    echo "Claude Code plugins (run once):"
-    echo "  claude plugin marketplace add anthropics/claude-plugins-official"
-    echo "  claude plugin marketplace add obra/superpowers-marketplace"
-    echo "  claude plugin marketplace add nextlevelbuilder/ui-ux-pro-max-skill"
-    echo "  claude plugin install context7@claude-plugins-official --scope user"
-    echo "  claude plugin install playwright@claude-plugins-official --scope user"
-    echo "  claude plugin install superpowers@superpowers-marketplace --scope user"
-    echo "  claude plugin install episodic-memory@superpowers-marketplace --scope user"
-    echo "  claude plugin install ui-ux-pro-max@ui-ux-pro-max-skill --scope user"
-    echo "  claude mcp add --scope user --transport http context7 https://mcp.context7.com/mcp \\"
-    echo "    --header \"CONTEXT7_API_KEY: \$(op read 'op://Kubernetes/Context7/api-key' --no-newline)\""
+if [ "$IS_DISTROBOX" = false ]; then
+    echo "Credential + plugin setup (run once — requires 1Password unlocked):"
+    echo "  setup-creds"
 fi
 echo ""
 echo ""

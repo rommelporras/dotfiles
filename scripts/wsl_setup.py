@@ -288,25 +288,25 @@ def run_chezmoi_apply(chezmoi_bin: Path) -> int:
     return result.returncode
 
 
-def run_setup_wsl_creds() -> int:
-    """Run setup-wsl-creds to install Claude plugins and seed credentials."""
-    script = Path.home() / ".local" / "bin" / "setup-wsl-creds"
+def run_setup_creds() -> int:
+    """Run setup-creds to install Claude plugins and seed credentials."""
+    script = Path.home() / ".local" / "bin" / "setup-creds"
     if not script.exists():
         console.print(
-            "[yellow]Warning:[/] setup-wsl-creds not found — "
+            "[yellow]Warning:[/] setup-creds not found — "
             "skipping credential seeding"
         )
         return 1
 
     console.print()
     console.print(
-        "[bold]Running setup-wsl-creds[/] "
+        "[bold]Running setup-creds[/] "
         "(requires 1Password unlock on Windows)..."
     )
     result = subprocess.run([str(script)])
     if result.returncode != 0:
         console.print(
-            f"[yellow]Warning:[/] setup-wsl-creds exited with code {result.returncode}"
+            f"[yellow]Warning:[/] setup-creds exited with code {result.returncode}"
         )
     return result.returncode
 
@@ -402,7 +402,7 @@ def main(argv: list[str] | None = None) -> None:
 
     # ─── Credentials ──────────────────────────────────────────────
     if not args.skip_creds:
-        run_setup_wsl_creds()
+        run_setup_creds()
 
     # ─── Done ─────────────────────────────────────────────────────
     console.print()
@@ -413,9 +413,9 @@ def main(argv: list[str] | None = None) -> None:
     console.print("  2. [bold]gh auth login[/]            — GitHub CLI (browser OAuth)")
     console.print()
     console.print(
-        "If setup-wsl-creds failed (1Password locked), re-run later:"
+        "If setup-creds failed (1Password locked), re-run later:"
     )
-    console.print("  [bold]setup-wsl-creds[/]")
+    console.print("  [bold]setup-creds[/]")
 
 
 if __name__ == "__main__":

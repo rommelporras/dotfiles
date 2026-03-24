@@ -51,6 +51,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default=None,
         help="Work git email (required for non-interactive work-* containers).",
     )
+    parser.add_argument(
+        "--skip-creds",
+        action="store_true",
+        help="Skip credential seeding (setup-creds).",
+    )
     return parser.parse_args(argv)
 
 
@@ -133,8 +138,9 @@ def main(argv: list[str] | None = None) -> None:
         config = _resolve_config(container, args)
         bootstrap_chezmoi(container, repo, config)
 
-        console.print()
-        run_setup_creds(container)
+        if not args.skip_creds:
+            console.print()
+            run_setup_creds(container)
 
         console.print()
         console.print(f"[bold]--- '{container}' bootstrap complete ---[/]")
@@ -152,10 +158,14 @@ def main(argv: list[str] | None = None) -> None:
     for container in containers:
         console.print(f"  Enter container:  [bold]distrobox enter {container}[/]")
     console.print()
-    console.print("[yellow]  Verify setup-creds ran correctly:[/]")
-    console.print("    1. Enter the container")
-    console.print("    2. Run [bold]atuin sync[/] — should sync without errors")
-    console.print("    3. If it fails, unlock 1Password and re-run: [bold]setup-creds[/]")
+    if args.skip_creds:
+        console.print("[yellow]  Credential seeding was skipped. Run inside each container:[/]")
+        console.print("    [bold]setup-creds[/]")
+    else:
+        console.print("[yellow]  Verify setup-creds ran correctly:[/]")
+        console.print("    1. Enter the container")
+        console.print("    2. Run [bold]atuin sync[/] — should sync without errors")
+        console.print("    3. If it fails, unlock 1Password and re-run: [bold]setup-creds[/]")
 
 
 if __name__ == "__main__":

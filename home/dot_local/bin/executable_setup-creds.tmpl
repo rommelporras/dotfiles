@@ -1,25 +1,41 @@
 #!/bin/bash
 set -euo pipefail
 
-# Credential and plugin seeding for Distrobox containers.
-# Calls 1Password on the Aurora host via distrobox-host-exec.
-# Run once after first container bootstrap.
+# Unified credential and plugin seeding for all platforms.
+# Detects platform and uses the appropriate 1Password access method:
+#   - Distrobox: distrobox-host-exec op (calls host's op CLI)
+#   - WSL: op (wrapper at ~/.local/bin/op forwards to Windows op.exe)
+#   - Aurora: op (native 1Password CLI via rpm-ostree)
 
-if [ -z "${DISTROBOX_ENTER_PATH:-}" ]; then
-    echo "Error: This script is for Distrobox containers only."
-    exit 1
+# ─── Platform detection ──────────────────────────────────────────────
+if [ -n "${DISTROBOX_ENTER_PATH:-}" ]; then
+    PLATFORM="distrobox"
+    OP="distrobox-host-exec op"
+    if ! command -v distrobox-host-exec &>/dev/null; then
+        echo "Error: distrobox-host-exec not found."
+        exit 1
+    fi
+elif grep -qi microsoft /proc/version 2>/dev/null; then
+    PLATFORM="wsl"
+    OP="op"
+    if ! command -v op &>/dev/null; then
+        echo "Error: 1Password CLI (op.exe) not found."
+        echo "Install on Windows: winget install AgileBits.1Password.CLI"
+        exit 1
+    fi
+else
+    PLATFORM="aurora"
+    OP="op"
+    if ! command -v op &>/dev/null; then
+        echo "Error: 1Password CLI not found."
+        echo "Install: rpm-ostree install 1password-cli"
+        exit 1
+    fi
 fi
 
-if ! command -v distrobox-host-exec &>/dev/null; then
-    echo "Error: distrobox-host-exec not found."
-    exit 1
-fi
+echo "Platform: $PLATFORM (op via: $OP)"
 
-# Always use host op for setup — native op inside personal-* containers
-# lacks desktop app integration. Native op is for interactive use after setup.
-OP="distrobox-host-exec op"
-
-# ─── Claude Code plugins (no 1Password dependency for install) ────────
+# ─── Claude Code plugins (no 1Password dependency) ────────────────────
 if command -v claude &>/dev/null; then
     echo "=== Claude Code Plugins ==="
 
@@ -42,8 +58,24 @@ else
 fi
 
 echo "=== Credential Setup ==="
-echo "This will prompt 1Password on the host for authentication."
+echo "This will prompt 1Password for authentication."
 echo ""
+
+# ─── Context7 MCP (needs 1Password for API key) ──────────────────────
+if command -v claude &>/dev/null; then
+    CONTEXT7_KEY=$($OP read 'op://Kubernetes/Context7/api-key' --no-newline 2>/dev/null || true)
+    if [ -n "$CONTEXT7_KEY" ]; then
+        if claude mcp add --scope user --transport http context7 \
+            https://mcp.context7.com/mcp \
+            --header "CONTEXT7_API_KEY: $CONTEXT7_KEY" 2>/dev/null; then
+            echo "Context7 MCP registered"
+        else
+            echo "Context7 MCP already configured (skipped)"
+        fi
+    else
+        echo "WARNING: Could not read Context7 API key — unlock 1Password and re-run"
+    fi
+fi
 
 {{ if ne .atuin_account "none" -}}
 # ─── Atuin ────────────────────────────────────────────────────────────
@@ -98,36 +130,31 @@ if command -v glab &>/dev/null; then
 else
     echo "glab: not installed, skipping"
 fi
-{{ end -}}
 
-{{ if .has_homelab_creds -}}
 # ─── Kubeconfig (homelab) ────────────────────────────────────────────
 echo "--- Kubeconfig ---"
 echo "Manual step: copy homelab.yaml to ~/.kube/"
+{{ if eq .platform "distrobox" -}}
 echo "  From host: cp ~/.kube/homelab.yaml ~/.distrobox/{{ .context }}/.kube/"
 {{ end -}}
+{{ end -}}
+
+# ─── GitHub CLI ───────────────────────────────────────────────────────
+if command -v gh &>/dev/null; then
+    if gh auth status &>/dev/null; then
+        echo "GitHub CLI: already authenticated"
+    else
+        echo "--- GitHub CLI ---"
+        echo "Run: gh auth login"
+        echo "(Browser-based OAuth — cannot be automated)"
+    fi
+fi
 
 {{ if .has_work_creds -}}
 # ─── AWS ──────────────────────────────────────────────────────────────
 echo "--- AWS ---"
 echo "Manual step: run 'aws sso login --profile <name>' after setup"
 {{ end -}}
-
-# ─── Context7 MCP (needs 1Password for API key) ──────────────────────
-if command -v claude &>/dev/null; then
-    CONTEXT7_KEY=$($OP read 'op://Kubernetes/Context7/api-key' --no-newline 2>/dev/null || true)
-    if [ -n "$CONTEXT7_KEY" ]; then
-        if claude mcp add --scope user --transport http context7 \
-            https://mcp.context7.com/mcp \
-            --header "CONTEXT7_API_KEY: $CONTEXT7_KEY" 2>/dev/null; then
-            echo "Context7 MCP registered"
-        else
-            echo "Context7 MCP already configured (skipped)"
-        fi
-    else
-        echo "WARNING: Could not read Context7 API key — re-run setup-creds when 1Password is available"
-    fi
-fi
 
 echo ""
 echo "=== Done ==="

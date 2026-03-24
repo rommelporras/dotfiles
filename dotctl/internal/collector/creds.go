@@ -21,16 +21,12 @@ func DetectSSHAgent() string {
 	return detectSSHAgentType(os.Getenv("SSH_AUTH_SOCK"))
 }
 
-// DetectSetupCreds checks if setup-creds or setup-wsl-creds has been deployed.
+// DetectSetupCreds checks if setup-creds has been deployed.
 func DetectSetupCreds() string {
-	for _, script := range []string{
-		os.Getenv("HOME") + "/.local/bin/setup-creds",
-		os.Getenv("HOME") + "/.local/bin/setup-wsl-creds",
-	} {
-		info, err := os.Stat(script)
-		if err == nil && info.Mode()&0o111 != 0 {
-			return "ran"
-		}
+	path := os.Getenv("HOME") + "/.local/bin/setup-creds"
+	info, err := os.Stat(path)
+	if err == nil && info.Mode()&0o111 != 0 {
+		return "ran"
 	}
 	return "n/a"
 }

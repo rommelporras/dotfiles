@@ -86,14 +86,14 @@ uv run python scripts/wsl_setup.py personal --personal-email you@example.com
 ```
 
 > To skip credential seeding (if 1Password isn't unlocked yet), add `--skip-creds`.
-> You can run `setup-wsl-creds` later to finish.
+> You can run `setup-creds` later to finish.
 
 The script:
 1. Validates WSL prerequisites (1Password, npiperelay, SSH agent)
 2. Clones `claude-config` repo to `~/personal/` (dotfiles already cloned above)
 3. Installs chezmoi and symlinks source → `~/personal/dotfiles`
 4. Writes non-interactive chezmoi config and runs `chezmoi init --apply --no-pager --force`
-5. Runs `setup-wsl-creds` (Claude plugins, Context7 MCP, Atuin login)
+5. Runs `setup-creds` (Claude plugins, Context7 MCP, Atuin login)
 
 After setup:
 ```bash
@@ -123,9 +123,9 @@ gh auth login
 For additional credential setup (AWS SSO, kubeconfig), see
 [docs/reference/credentials.md](../reference/credentials.md).
 
-If `setup-wsl-creds` failed (1Password was locked), re-run it:
+If `setup-creds` failed (1Password was locked), re-run it:
 ```bash
-setup-wsl-creds
+setup-creds
 ```
 
 ## 5. Keeping in sync
@@ -151,6 +151,13 @@ chezmoi apply --no-pager --force
 
 > `--no-pager` prevents chezmoi from opening a diff viewer (blocks on `:` colon).
 > `--force` auto-overwrites oh-my-zsh cache files without prompting.
+
+If `.chezmoi.toml.tmpl` changed (new template variables added), re-run init
+to pick up the new prompts:
+```bash
+chezmoi init
+chezmoi apply --no-pager --force
+```
 
 ## What bootstrap installs automatically
 

@@ -212,7 +212,7 @@ cat > "$HOME/.config/chezmoi/chezmoi.toml" <<'TOML'
 {clear_cmd}
 
 # Apply
-"$HOME/bin/chezmoi" init --apply
+"$HOME/bin/chezmoi" init --apply --no-pager --force
 """
     try:
         result = subprocess.run(

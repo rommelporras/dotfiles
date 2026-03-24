@@ -30,6 +30,9 @@ uv run python scripts/distrobox_setup.py \
   --work-email work@company.com
 ```
 
+> To skip credential seeding (if 1Password isn't unlocked yet), add `--skip-creds`.
+> You can run `setup-creds` inside the container later to finish.
+
 The setup script installs chezmoi, symlinks the host repo, runs `chezmoi init --apply`,
 and runs `setup-creds` automatically. Tools installed per context:
 
@@ -49,12 +52,12 @@ Container chezmoi source is symlinked to the host repo (`~/personal/dotfiles`).
 When the host pulls new changes, containers automatically see them — no separate
 git pull needed inside containers.
 
+> **Note:** The `dotup` alias uses `chezmoi update` which does a git pull — this is
+> unnecessary inside containers since the source is symlinked. Use `chezmoi apply` instead.
+
 **On the Aurora host:**
 ```bash
-cd ~/personal/dotfiles
-git pull
-chezmoi apply     # update Aurora host dotfiles
-exec zsh
+dotup             # alias for: chezmoi update -v --no-pager --force && exec zsh
 ```
 
 **Inside each container (after host pulls):**
@@ -65,8 +68,15 @@ exec zsh
 
 If the bootstrap script changed (new tools added), re-run it inside the container:
 ```bash
+sudo -v   # cache sudo first
 ~/bin/chezmoi state delete-bucket --bucket=scriptState
-~/bin/chezmoi apply
+~/bin/chezmoi apply --no-pager --force
+```
+
+If `.chezmoi.toml.tmpl` changed (new template variables added), re-run init:
+```bash
+~/bin/chezmoi init
+~/bin/chezmoi apply --no-pager --force
 ```
 
 ## IDE and browser forwarding

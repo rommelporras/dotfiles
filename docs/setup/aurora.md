@@ -62,14 +62,25 @@
    brew install go uv kubectl gh glab
    brew install --cask claude-code
    ```
-   - `go` — required to build `dotctl` (`make install` in step 3)
+   - `go` — required to build `dotctl` (auto-built by bootstrap if Go is present)
    - `uv` — Python project manager, required for distrobox setup scripts
    - `kubectl` — Kubernetes CLI for homelab cluster access
    - `gh` — GitHub CLI for PRs and repo operations
    - `glab` — GitLab CLI for self-hosted GitLab operations
    - `claude-code` — Claude Code cask (installs `claude` binary)
 
-   > The bootstrap also auto-installs `node@24` and `gitleaks` via brew if not already present.
+10. Install **Antigravity IDE** (optional):
+    ```bash
+    sudo tee /etc/yum.repos.d/antigravity.repo <<'REPO'
+    [antigravity]
+    name=Antigravity RPM Repository
+    baseurl=https://us-central1-yum.pkg.dev/projects/antigravity-auto-updater-dev/antigravity-rpm
+    enabled=1
+    gpgcheck=0
+    REPO
+    rpm-ostree install antigravity
+    systemctl reboot
+    ```
 
 ## 2. Install chezmoi and apply dotfiles
 
@@ -101,6 +112,9 @@ exec zsh
 
 ## 3. Build dotctl
 
+> If Go was installed (step 9) before `chezmoi init --apply` (step 2), dotctl is
+> already built automatically by the bootstrap. You only need `make install-systemd`.
+
 ```bash
 cd ~/personal/dotfiles
 make install          # builds and copies to ~/.local/bin/
@@ -129,6 +143,9 @@ uv run python scripts/distrobox_setup.py \
   --work-email work@company.com
 ```
 
+> To skip credential seeding (if 1Password isn't unlocked yet), add `--skip-creds`.
+> You can run `setup-creds` inside the container later to finish.
+
 See [docs/reference/distrobox-scripts.md](../reference/distrobox-scripts.md) for full reference.
 
 ## 5. AI Sandbox (optional)
@@ -146,14 +163,22 @@ setup (Atuin, Anthropic, Context7 API keys).
 
 ## 6. Set up credentials
 
-See [docs/reference/credentials.md](../reference/credentials.md).
+Run the unified credential seeding script (requires 1Password unlocked):
+```bash
+setup-creds
+```
+
+This handles Claude Code plugins, Context7 MCP, Atuin login, GitLab auth,
+and prints instructions for remaining manual steps (gh auth, kubeconfig).
+
+See [docs/reference/credentials.md](../reference/credentials.md) for details.
 
 ## 7. Keeping in sync
 
 After pushing changes from any machine:
 
 ```bash
-dotup             # alias for: chezmoi update -v && exec zsh
+dotup             # alias for: chezmoi update -v --no-pager --force && exec zsh
 ```
 
 Or manually:
@@ -166,8 +191,41 @@ exec zsh          # reload shell if .zshrc changed
 
 If the bootstrap script changed (new tools added), re-run it:
 ```bash
+sudo -v   # cache sudo first — chezmoi captures stdin so you can't type passwords during apply
 chezmoi state delete-bucket --bucket=scriptState
-chezmoi apply
+chezmoi apply --no-pager --force
+```
+
+> `--no-pager` prevents chezmoi from opening a diff viewer (blocks on `:` colon).
+> `--force` auto-overwrites oh-my-zsh cache files without prompting.
+
+If `.chezmoi.toml.tmpl` changed (new template variables added), re-run init
+to pick up the new prompts:
+```bash
+chezmoi init ~/personal/dotfiles
+chezmoi apply --no-pager --force
 ```
 
 Then apply inside each Distrobox container — see [docs/setup/distrobox.md](distrobox.md).
+
+## What bootstrap installs automatically
+
+These tools are installed by `chezmoi init --apply` — no manual action needed:
+
+| Tool | How | Notes |
+|---|---|---|
+| Starship | curl installer | Prompt theme with Nerd Font icons |
+| Atuin | curl installer | If atuin_account != "none" |
+| Node.js 24 | `brew install node@24` | For Claude Code MCP plugins |
+| Gitleaks | `brew install gitleaks` | Pre-commit secret scanning |
+| dotctl | Built from source | If Go is in PATH (step 9) |
+| claude-config symlinks | git clone + symlink | `~/.claude/` → `~/personal/claude-config/` |
+| chezmoi PATH symlink | symlink | Ensures chezmoi is in `~/.local/bin/` |
+
+**Still manual:**
+- 1Password + CLI (step 5 — rpm-ostree)
+- Go, uv, kubectl, gh, glab (step 9 — brew)
+- Claude Code (step 9 — brew cask)
+- Antigravity IDE (step 10 — rpm-ostree)
+- `setup-creds` (step 6 — credential seeding)
+- Font install (ujust devmode handles via brew cask)
