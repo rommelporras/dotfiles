@@ -133,10 +133,23 @@ fi
 
 # ─── Kubeconfig (homelab) ────────────────────────────────────────────
 echo "--- Kubeconfig ---"
-echo "Manual step: copy homelab.yaml to ~/.kube/"
-{{ if eq .platform "distrobox" -}}
-echo "  From host: cp ~/.kube/homelab.yaml ~/.distrobox/{{ .context }}/.kube/"
-{{ end -}}
+mkdir -p ~/.kube
+
+if $OP item get 'Kubeconfig' --vault=Kubernetes --fields admin-kubeconfig 2>/dev/null > ~/.kube/homelab.yaml && [ -s ~/.kube/homelab.yaml ]; then
+    chmod 600 ~/.kube/homelab.yaml
+    echo "Kubeconfig: homelab.yaml installed"
+else
+    rm -f ~/.kube/homelab.yaml
+    echo "WARNING: Could not read admin kubeconfig — unlock 1Password and re-run"
+fi
+
+if $OP item get 'Kubeconfig' --vault=Kubernetes --fields claude-kubeconfig 2>/dev/null > ~/.kube/homelab-claude.yaml && [ -s ~/.kube/homelab-claude.yaml ]; then
+    chmod 600 ~/.kube/homelab-claude.yaml
+    echo "Kubeconfig: homelab-claude.yaml installed"
+else
+    rm -f ~/.kube/homelab-claude.yaml
+    echo "WARNING: Could not read claude kubeconfig — unlock 1Password and re-run"
+fi
 {{ end -}}
 
 # ─── GitHub CLI ───────────────────────────────────────────────────────

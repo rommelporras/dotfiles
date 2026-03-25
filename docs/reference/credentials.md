@@ -35,9 +35,8 @@ claude plugin install ui-ux-pro-max@ui-ux-pro-max-skill --scope user
 claude mcp add --scope user --transport http context7 https://mcp.context7.com/mcp \
   --header "CONTEXT7_API_KEY: $(op read 'op://Kubernetes/Context7/api-key' --no-newline)"
 
-# Homelab kubeconfigs (from 1Password "Kubeconfig" item)
-op item get 'Kubeconfig' --vault=Kubernetes --fields admin-kubeconfig > ~/.kube/homelab.yaml
-op item get 'Kubeconfig' --vault=Kubernetes --fields claude-kubeconfig > ~/.kube/homelab-claude.yaml
+# Homelab kubeconfigs — automated by setup-creds
+# (pulls from 1Password "Kubeconfig" item in Kubernetes vault)
 
 # GitLab
 glab auth login --hostname gitlab.k8s.rommelporras.com \
