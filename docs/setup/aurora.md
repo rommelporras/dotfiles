@@ -115,6 +115,10 @@ After install:
 exec zsh
 ```
 
+> **Atuin is installed but not logged in yet.** The bootstrap only installs the
+> binary — login requires 1Password credentials. Run `setup-creds` (step 6) to
+> complete Atuin login and sync.
+
 ## 3. Build dotctl
 
 > If Go was installed (step 9) before `chezmoi init --apply` (step 2), dotctl is
@@ -220,7 +224,7 @@ These tools are installed by `chezmoi init --apply` — no manual action needed:
 | Tool | How | Notes |
 |---|---|---|
 | Starship | curl installer | Prompt theme with Nerd Font icons |
-| Atuin | curl installer | If atuin_account != "none" |
+| Atuin | curl installer | Install only — login requires `setup-creds` (step 6) |
 | Node.js 24 | `brew install node@24` | For Claude Code MCP plugins |
 | Gitleaks | `brew install gitleaks` | Pre-commit secret scanning |
 | dotctl | Built from source | If Go is in PATH (step 9) |
