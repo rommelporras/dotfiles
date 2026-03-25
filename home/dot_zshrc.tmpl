@@ -204,6 +204,7 @@ alias tmp='cd ~/eam/tmp'
 {{ end -}}
 
 alias personal='cd ~/personal'
+alias dotfiles='cd ~/personal/dotfiles'
 
 {{ if or (eq .context "personal") (hasPrefix "personal-" .context) (hasPrefix "work-" .context) -}}
 # Claude Code Telemetry → Homelab K8s OTel Collector
