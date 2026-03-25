@@ -6,25 +6,30 @@
 > image, which resets any rpm-ostree layered packages. Install 1Password **after**
 > devmode, not before.
 
-1. Enable developer mode (installs Docker, Podman, Distrobox, dev tooling):
+1. Set hostname (Aurora defaults to a random name):
+   ```bash
+   hostnamectl set-hostname dl5400
+   ```
+
+2. Enable developer mode (installs Docker, Podman, Distrobox, dev tooling):
    ```bash
    ujust devmode
    ```
    Follow the prompts, then reboot when finished.
 
-2. Add your user to developer groups (docker, etc.):
+3. Add your user to developer groups (docker, etc.):
    ```bash
    ujust dx-group
    ```
    Log out and back in for group changes to take effect.
 
-3. Install brew CLI tools:
+4. Install brew CLI tools:
    ```bash
    ujust aurora-cli
    ```
    Close and reopen terminal.
 
-4. Switch default shell to zsh (Aurora ships bash as default):
+5. Switch default shell to zsh (Aurora ships bash as default):
    ```bash
    brew install zsh
    ```
@@ -32,7 +37,7 @@
    "Use Custom Command" → `/home/linuxbrew/.linuxbrew/bin/zsh`
    (Do NOT use `chsh` — atomic systems don't have it, and changing login shell risks login loops)
 
-5. Install **1Password** via rpm-ostree (NOT Flatpak — Flatpak SSH agent is broken by sandbox):
+6. Install **1Password** via rpm-ostree (NOT Flatpak — Flatpak SSH agent is broken by sandbox):
    ```bash
    cat << 'EOF' | sudo tee /etc/yum.repos.d/1password.repo
    [1password]
@@ -47,9 +52,9 @@
    systemctl reboot
    ```
 
-6. Open 1Password → sign in → Settings → Developer → enable **SSH Agent**
-7. Settings → Security → enable **Unlock using system authentication** (uses Aurora user password or fingerprint)
-8. SSH agent socket is at `~/.1password/agent.sock` (lowercase p).
+7. Open 1Password → sign in → Settings → Developer → enable **SSH Agent**
+8. Settings → Security → enable **Unlock using system authentication** (uses Aurora user password or fingerprint)
+9. SSH agent socket is at `~/.1password/agent.sock` (lowercase p).
    `.zshrc` sets `SSH_AUTH_SOCK` automatically — but only after chezmoi applies it.
    For the next step, export it manually in the current session:
    ```bash
@@ -57,7 +62,7 @@
    ssh-add -l   # should list your keys — if empty, check 1Password SSH Agent settings
    ```
 
-9. Install CLI tools needed for dotfiles and homelab:
+10. Install CLI tools needed for dotfiles and homelab:
    ```bash
    brew install go uv kubectl gh glab
    brew install --cask claude-code
