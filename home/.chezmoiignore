@@ -5,3 +5,6 @@ docs/
 
 # Claude Code config is managed by claude-config repo (symlinks), not chezmoi
 .claude/
+
+# Kiro IDE/CLI config is managed separately
+.kiro/

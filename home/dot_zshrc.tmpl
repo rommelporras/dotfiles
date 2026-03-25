@@ -172,6 +172,28 @@ alias tfp="terraform plan"
 alias tfwl="terraform workspace list"
 {{ end -}}
 
+{{ if and (eq .platform "wsl") (hasPrefix "work-" .context) -}}
+# ─── Kiro IDE — auto-detect install, launch with WSL remoting ────────
+_KIRO_EXE=$(find /mnt/c/Users/*/AppData/Local/Programs/Kiro/Kiro.exe 2>/dev/null | head -1)
+if [ -n "$_KIRO_EXE" ]; then
+  kiro() {
+    local kiro_path="${_KIRO_EXE%/Kiro.exe}"
+    local cli
+    cli=$(wslpath -m "$kiro_path/resources/app/out/cli.js")
+    local target="${1:-.}"
+    if [ -d "$target" ]; then
+      target="$(cd "$target" && pwd)"
+      WSLENV="ELECTRON_RUN_AS_NODE/w:$WSLENV" ELECTRON_RUN_AS_NODE=1 \
+        "$_KIRO_EXE" "$cli" \
+        --folder-uri "vscode-remote://wsl+${WSL_DISTRO_NAME}${target}" &>/dev/null &
+    else
+      WSLENV="ELECTRON_RUN_AS_NODE/w:$WSLENV" ELECTRON_RUN_AS_NODE=1 \
+        "$_KIRO_EXE" "$cli" "$target" &>/dev/null &
+    fi
+  }
+fi
+{{ end -}}
+
 {{ if eq .context "work-eam" -}}
 # ─── EAM-specific ────────────────────────────────────────────────────
 alias eam='cd ~/eam'
