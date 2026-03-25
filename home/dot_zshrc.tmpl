@@ -1,3 +1,8 @@
+{{ if hasPrefix "work-" .context -}}
+# Kiro CLI pre block. Keep at the top of this file.
+[[ -f "${HOME}/.local/share/kiro-cli/shell/zshrc.pre.zsh" ]] && builtin source "${HOME}/.local/share/kiro-cli/shell/zshrc.pre.zsh"
+{{ end -}}
+
 # Ensure $SHELL matches the running shell (distrobox inherits host's $SHELL)
 export SHELL=$(command -v zsh)
 {{ if eq .platform "distrobox" -}}
@@ -226,4 +231,9 @@ alias kubectl-homelab='kubectl --kubeconfig ~/.kube/homelab-claude.yaml'
 alias kubectl-admin='kubectl --kubeconfig ~/.kube/homelab.yaml'
 alias helm-homelab='KUBECONFIG=~/.kube/homelab.yaml helm'
 export VAULT_ADDR=https://vault.k8s.rommelporras.com
+{{ end -}}
+
+{{ if hasPrefix "work-" .context -}}
+# Kiro CLI post block. Keep at the bottom of this file.
+[[ -f "${HOME}/.local/share/kiro-cli/shell/zshrc.post.zsh" ]] && builtin source "${HOME}/.local/share/kiro-cli/shell/zshrc.post.zsh"
 {{ end -}}
