@@ -158,8 +158,8 @@ def full_config(
 # ─── Setup steps ──────────────────────────────────────────────────────
 
 
-def clone_repos() -> None:
-    """Clone claude-config and dotfiles repos if not present."""
+def clone_repos(context: str) -> None:
+    """Clone claude-config, dotfiles, and (for work contexts) kiro-config."""
     personal_dir = Path.home() / "personal"
     personal_dir.mkdir(exist_ok=True)
 
@@ -184,6 +184,18 @@ def clone_repos() -> None:
         ])
     else:
         console.print(f"dotfiles already at {dotfiles}")
+
+    if context.startswith("work-"):
+        kiro_config = personal_dir / "kiro-config"
+        if not kiro_config.exists():
+            console.print("Cloning kiro-config...")
+            _run([
+                "git", "clone",
+                f"git@github.com:{GITHUB_USER}/kiro-config.git",
+                str(kiro_config),
+            ])
+        else:
+            console.print(f"kiro-config already at {kiro_config}")
 
 
 def install_chezmoi() -> Path:
@@ -288,6 +300,38 @@ def run_chezmoi_apply(chezmoi_bin: Path) -> int:
     return result.returncode
 
 
+def link_kiro_config() -> None:
+    """Create ~/.kiro/ symlinks pointing to ~/personal/kiro-config/."""
+    kiro_config = Path.home() / "personal" / "kiro-config"
+    if not kiro_config.exists():
+        console.print("[yellow]Warning:[/] kiro-config not found — skipping symlinks")
+        return
+
+    kiro_dir = Path.home() / ".kiro"
+    kiro_dir.mkdir(exist_ok=True)
+
+    for name in ("steering", "agents", "skills", "settings"):
+        source = kiro_config / name
+        target = kiro_dir / name
+        if target.is_symlink() and target.resolve() == source.resolve():
+            console.print(f"  {name}/ already linked")
+            continue
+        if target.is_symlink() or target.is_dir():
+            backup = kiro_dir / f"{name}.bak"
+            if not backup.exists():
+                target.rename(backup)
+                console.print(f"  Backed up {name}/ → {name}.bak/")
+            else:
+                if target.is_symlink():
+                    target.unlink()
+                else:
+                    shutil.rmtree(target)
+        target.symlink_to(source)
+        console.print(f"  Linked {name}/ → {source}")
+
+    console.print("Kiro config symlinks created")
+
+
 def run_setup_creds() -> int:
     """Run setup-creds to install Claude plugins and seed credentials."""
     script = Path.home() / ".local" / "bin" / "setup-creds"
@@ -375,7 +419,7 @@ def main(argv: list[str] | None = None) -> None:
 
     # ─── Clone repos ──────────────────────────────────────────────
     console.print("[bold]--- Cloning repositories ---[/]")
-    clone_repos()
+    clone_repos(args.context)
 
     dotfiles_path = Path.home() / "personal" / "dotfiles"
 
@@ -399,6 +443,12 @@ def main(argv: list[str] | None = None) -> None:
         console.print(
             "[yellow]Bootstrap had warnings — check output above.[/]"
         )
+
+    # ─── Kiro config (work contexts) ─────────────────────────────
+    if args.context.startswith("work-"):
+        console.print()
+        console.print("[bold]--- Linking Kiro config ---[/]")
+        link_kiro_config()
 
     # ─── Credentials ──────────────────────────────────────────────
     if not args.skip_creds:

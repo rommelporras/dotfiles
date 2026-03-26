@@ -114,6 +114,13 @@ if [ -d "$HOME/personal/claude-config" ]; then
 fi
 {{ end -}}
 
+{{ if hasPrefix "work-" .context -}}
+# ─── Auto-sync kiro-config on shell startup ──────────────────────
+if [ -d "$HOME/personal/kiro-config" ]; then
+    (GIT_TERMINAL_PROMPT=0 timeout 5 git -C "$HOME/personal/kiro-config" pull --ff-only --quiet >/dev/null 2>&1 &)
+fi
+{{ end -}}
+
 # ─── Source bling.sh on Aurora (eza, bat, direnv, zoxide, mise, ugrep) ──
 {{ if eq .platform "aurora" -}}
 test -f /usr/share/ublue-os/bling/bling.sh && source /usr/share/ublue-os/bling/bling.sh
@@ -175,6 +182,7 @@ export OP_BIOMETRIC_UNLOCK_ENABLED=true
 alias tfi="terraform init -reconfigure"
 alias tfp="terraform plan"
 alias tfwl="terraform workspace list"
+alias kiro-config='cd ~/personal/kiro-config'
 {{ end -}}
 
 {{ if and (eq .platform "wsl") (hasPrefix "work-" .context) -}}
