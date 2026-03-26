@@ -77,6 +77,20 @@ if command -v claude &>/dev/null; then
     fi
 fi
 
+{{ if hasPrefix "work-" .context -}}
+# ─── Context7 API key for Kiro CLI ──────────────────────────────────
+echo "--- Context7 (Kiro CLI) ---"
+CONTEXT7_KEY=$($OP read 'op://Kubernetes/Context7/api-key' --no-newline 2>/dev/null || true)
+if [ -n "$CONTEXT7_KEY" ]; then
+    mkdir -p ~/.config/kiro
+    echo "$CONTEXT7_KEY" > ~/.config/kiro/context7-api-key
+    chmod 600 ~/.config/kiro/context7-api-key
+    echo "Context7 API key seeded for Kiro CLI"
+else
+    echo "WARNING: Could not read Context7 API key — Kiro will use keyless mode (rate-limited)"
+fi
+{{ end -}}
+
 {{ if ne .atuin_account "none" -}}
 # ─── Atuin ────────────────────────────────────────────────────────────
 # Atuin installs to ~/.atuin/bin/ which isn't in PATH outside of zsh

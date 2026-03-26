@@ -310,7 +310,7 @@ def link_kiro_config() -> None:
     kiro_dir = Path.home() / ".kiro"
     kiro_dir.mkdir(exist_ok=True)
 
-    for name in ("steering", "agents", "skills", "settings"):
+    for name in ("steering", "agents", "skills", "settings", "hooks"):
         source = kiro_config / name
         target = kiro_dir / name
         if target.is_symlink() and target.resolve() == source.resolve():

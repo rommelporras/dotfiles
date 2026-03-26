@@ -41,7 +41,12 @@ kiro-config/
 │   └── finishing-a-development-branch/SKILL.md
 └── settings/
     ├── cli.json
-    └── mcp.json               # 9 AWS MCP servers
+    └── mcp.json               # 10 MCP servers (9 AWS + context7)
+├── hooks/
+│   ├── scan-secrets.sh        # PreToolUse: blocks writes containing secret patterns
+│   ├── protect-sensitive.sh   # PreToolUse: blocks writes to .env, .pem, credentials
+│   ├── bash-write-protect.sh  # PreToolUse: blocks destructive shell commands
+│   └── notify.sh              # Stop: plays notification sound (tada on WSL, notify-send on Linux)
 ```
 
 ## Symlink setup
@@ -56,6 +61,7 @@ ln -sfn ~/personal/kiro-config/steering ~/.kiro/steering
 ln -sfn ~/personal/kiro-config/agents ~/.kiro/agents
 ln -sfn ~/personal/kiro-config/skills ~/.kiro/skills
 ln -sfn ~/personal/kiro-config/settings ~/.kiro/settings
+ln -sfn ~/personal/kiro-config/hooks ~/.kiro/hooks
 ```
 
 ## Chezmoi integration

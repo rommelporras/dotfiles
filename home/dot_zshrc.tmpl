@@ -119,6 +119,9 @@ fi
 if [ -d "$HOME/personal/kiro-config" ]; then
     (GIT_TERMINAL_PROMPT=0 timeout 5 git -C "$HOME/personal/kiro-config" pull --ff-only --quiet >/dev/null 2>&1 &)
 fi
+
+# ─── Context7 API key for Kiro CLI MCP ───────────────────────────
+[ -f ~/.config/kiro/context7-api-key ] && export CONTEXT7_API_KEY=$(cat ~/.config/kiro/context7-api-key)
 {{ end -}}
 
 # ─── Source bling.sh on Aurora (eza, bat, direnv, zoxide, mise, ugrep) ──
