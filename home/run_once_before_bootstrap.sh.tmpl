@@ -64,7 +64,7 @@ fi
 
 if [ -d "$CLAUDE_CONFIG_REPO" ]; then
     mkdir -p "$HOME/.claude"
-    for item in CLAUDE.md settings.json rules hooks skills agents; do
+    for item in CLAUDE.md settings.json rules hooks skills agents output-styles; do
         if [ -e "$CLAUDE_CONFIG_REPO/$item" ]; then
             # Remove existing file/dir before symlinking (ln -sf can't replace dirs)
             if [ -e "$HOME/.claude/$item" ] && [ ! -L "$HOME/.claude/$item" ]; then
