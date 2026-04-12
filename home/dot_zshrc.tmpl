@@ -143,6 +143,7 @@ alias agy='antigravity'
 alias zshconfig="${EDITOR:-code} ~/.zshrc"
 alias dotup="chezmoi update -v --no-pager --force && exec zsh"
 alias pip=pip3
+alias python=python3
 alias ai-sandbox="$HOME/personal/dotfiles/bin/ai-sandbox"
 
 {{ if eq .platform "wsl" -}}
@@ -212,7 +213,7 @@ fi
 
 {{ if eq .context "work-eam" -}}
 # ─── EAM-specific ────────────────────────────────────────────────────
-alias eam='cd ~/eam'
+alias goeam='cd ~/eam'
 alias eam-sre='cd ~/eam/eam-sre/rommel-porras'
 alias eam-terraform='cd ~/eam/eam-terraform'
 alias nightly-restart='cd ~/eam/eam-nightly-restart'
